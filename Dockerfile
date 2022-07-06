@@ -3,6 +3,7 @@ FROM bitnami/minideb:bullseye
 LABEL description="free5GC UPF service" version="Stage 3"
 
 ENV F5GC_MODULE upf
+ENV DEBIAN_FRONTEND noninteractive
 ARG DEBUG_TOOLS
 
 # Install debug tools ~ 100MB (if DEBUG_TOOLS is set to true)
