@@ -19,7 +19,7 @@ WORKDIR /free5gc
 RUN mkdir -p config/ log/
 
 # Copy executable
-COPY --from=builder /free5gc/${F5GC_MODULE} ./
+COPY build/bin/${F5GC_MODULE} ./
 
 # Config files volume
 VOLUME [ "/free5gc/config" ]
