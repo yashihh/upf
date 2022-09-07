@@ -1093,7 +1093,7 @@ func (g *Gtp5g) UpdateURR(lSeid uint64, req *ie.IE) ([]report.USAReport, error) 
 
 	oid := gtp5gnl.OID{lSeid, urrid}
 	// TODO: return USAReport
-	err = gtp5gnl.UpdateURROID(g.client, g.link.link, oid, attrs)
+	_, err = gtp5gnl.UpdateURROID(g.client, g.link.link, oid, attrs)
 	return nil, err
 }
 
@@ -1104,7 +1104,7 @@ func (g *Gtp5g) RemoveURR(lSeid uint64, req *ie.IE) ([]report.USAReport, error) 
 	}
 	oid := gtp5gnl.OID{lSeid, uint64(v)}
 	// TODO: return USAReport
-	err = gtp5gnl.RemoveURROID(g.client, g.link.link, oid)
+	_, err = gtp5gnl.RemoveURROID(g.client, g.link.link, oid)
 	return nil, err
 }
 
@@ -1236,14 +1236,17 @@ func (g *Gtp5g) applyAction(lSeid uint64, farid int, action uint8) {
 				continue
 			}
 			var qer *gtp5gnl.QER
-			if pdr.QERID != nil {
-				oid := gtp5gnl.OID{lSeid, uint64(*pdr.QERID)}
+			for _, qerId := range pdr.QERID {
+				oid := gtp5gnl.OID{lSeid, uint64(qerId)}
 				q, err := gtp5gnl.GetQEROID(g.client, g.link.link, oid)
 				if err != nil {
 					g.log.Warnf("applyAction GetQEROID err: %+v", err)
 					continue
 				}
-				qer = q
+				if q.QFI != 0 {
+					qer = q
+					break
+				}
 			}
 			for {
 				pkt, ok := g.bs.Pop(lSeid, pdrid)
