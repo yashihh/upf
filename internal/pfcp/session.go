@@ -14,7 +14,8 @@ func (s *PfcpServer) handleSessionEstablishmentRequest(
 	addr net.Addr,
 ) {
 	// TODO: error response
-	s.log.Infoln("handleSessionEstablishmentRequest")
+	s.log.Infof("handleSessionEstablishmentRequest SEQ[%#x] SEID[%#x]",
+		req.SequenceNumber, req.SEID())
 
 	if req.NodeID == nil {
 		s.log.Errorln("not found NodeID")
@@ -95,7 +96,7 @@ func (s *PfcpServer) handleSessionEstablishmentRequest(
 		0,             // mp
 		0,             // fo
 		sess.RemoteID, // seid
-		req.Header.SequenceNumber,
+		req.SequenceNumber,
 		0, // pri
 		newIeNodeID(s.nodeID),
 		ie.NewCause(ie.CauseRequestAccepted),
@@ -114,16 +115,16 @@ func (s *PfcpServer) handleSessionModificationRequest(
 	addr net.Addr,
 ) {
 	// TODO: error response
-	s.log.Infoln("handleSessionModificationRequest")
 
 	sess, err := s.lnode.Sess(req.SEID())
 	if err != nil {
-		s.log.Errorf("handleSessionModificationRequest: %v", err)
+		s.log.Errorf("handleSessionModificationRequest SEQ[%#x] SEID[%#x]: %v",
+			req.SequenceNumber, req.SEID(), err)
 		rsp := message.NewSessionModificationResponse(
 			0, // mp
 			0, // fo
 			0, // seid
-			req.Header.SequenceNumber,
+			req.SequenceNumber,
 			0, // pri
 			ie.NewCause(ie.CauseSessionContextNotFound),
 		)
@@ -135,6 +136,8 @@ func (s *PfcpServer) handleSessionModificationRequest(
 		}
 		return
 	}
+	sess.log.Infof("handleSessionModificationRequest SEQ[%#x] SEID[%#x]",
+		req.SequenceNumber, req.SEID())
 
 	if req.NodeID != nil {
 		// TS 29.244 7.5.4:
@@ -267,7 +270,7 @@ func (s *PfcpServer) handleSessionModificationRequest(
 		0,             // mp
 		0,             // fo
 		sess.RemoteID, // seid
-		req.Header.SequenceNumber,
+		req.SequenceNumber,
 		0, // pri
 		ie.NewCause(ie.CauseRequestAccepted),
 	)
@@ -290,17 +293,17 @@ func (s *PfcpServer) handleSessionDeletionRequest(
 	addr net.Addr,
 ) {
 	// TODO: error response
-	s.log.Infoln("handleSessionDeletionRequest")
 
 	lSeid := req.SEID()
 	sess, err := s.lnode.Sess(lSeid)
 	if err != nil {
-		s.log.Errorf("handleSessionDeletionRequest: %v", err)
+		s.log.Errorf("handleSessionDeletionRequest SEQ[%#x] SEID[%#x]: %v",
+			req.SequenceNumber, req.SEID(), err)
 		rsp := message.NewSessionDeletionResponse(
 			0, // mp
 			0, // fo
 			0, // seid
-			req.Header.SequenceNumber,
+			req.SequenceNumber,
 			0, // pri
 			ie.NewCause(ie.CauseSessionContextNotFound),
 		)
@@ -312,6 +315,8 @@ func (s *PfcpServer) handleSessionDeletionRequest(
 		}
 		return
 	}
+	sess.log.Infof("handleSessionDeletionRequest SEQ[%#x] SEID[%#x]",
+		req.SequenceNumber, req.SEID())
 
 	usars := sess.rnode.DeleteSess(lSeid)
 
@@ -319,7 +324,7 @@ func (s *PfcpServer) handleSessionDeletionRequest(
 		0,             // mp
 		0,             // fo
 		sess.RemoteID, // seid
-		req.Header.SequenceNumber,
+		req.SequenceNumber,
 		0, // pri
 		ie.NewCause(ie.CauseRequestAccepted),
 	)
@@ -342,7 +347,8 @@ func (s *PfcpServer) handleSessionReportResponse(
 	addr net.Addr,
 	req message.Message,
 ) {
-	s.log.Infoln("handleSessionReportResponse")
+	s.log.Infof("handleSessionReportResponse SEQ[%#x] SEID[%#x]",
+		rsp.SequenceNumber, req.SEID())
 
 	s.log.Debugf("seid: %#x\n", rsp.SEID())
 	if rsp.Header.SEID == 0 {
@@ -369,6 +375,7 @@ func (s *PfcpServer) handleSessionReportRequestTimeout(
 	req *message.SessionReportRequest,
 	addr net.Addr,
 ) {
-	s.log.Warnf("handleSessionReportRequestTimeout: SEID[%#x]", req.SEID())
+	s.log.Warnf("handleSessionReportRequestTimeout SEQ[%#x] SEID[%#x]",
+		req.SequenceNumber, req.SEID())
 	// TODO?
 }

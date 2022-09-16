@@ -88,10 +88,16 @@ func (s *Sess) CreatePDR(req *ie.IE) error {
 		return err
 	}
 	s.PDRIDs[id] = struct{}{}
+	s.log.Debugf("CreatePDR PDRID[%#x]", id)
 	return nil
 }
 
 func (s *Sess) UpdatePDR(req *ie.IE) error {
+	id, err := req.PDRID()
+	if err != nil {
+		return err
+	}
+	s.log.Debugf("UpdatePDR PDRID[%#x]", id)
 	return s.rnode.driver.UpdatePDR(s.LocalID, req)
 }
 
@@ -106,6 +112,7 @@ func (s *Sess) RemovePDR(req *ie.IE) error {
 		return err
 	}
 	delete(s.PDRIDs, id)
+	s.log.Debugf("RemovePDR PDRID[%#x]", id)
 	return nil
 }
 
@@ -120,10 +127,16 @@ func (s *Sess) CreateFAR(req *ie.IE) error {
 		return err
 	}
 	s.FARIDs[id] = struct{}{}
+	s.log.Debugf("CreateFAR FARID[%#x]", id)
 	return nil
 }
 
 func (s *Sess) UpdateFAR(req *ie.IE) error {
+	id, err := req.FARID()
+	if err != nil {
+		return err
+	}
+	s.log.Debugf("UpdateFAR FARID[%#x]", id)
 	return s.rnode.driver.UpdateFAR(s.LocalID, req)
 }
 
@@ -138,6 +151,7 @@ func (s *Sess) RemoveFAR(req *ie.IE) error {
 		return err
 	}
 	delete(s.FARIDs, id)
+	s.log.Debugf("RemoveFAR FARID[%#x]", id)
 	return nil
 }
 
@@ -152,10 +166,16 @@ func (s *Sess) CreateQER(req *ie.IE) error {
 		return err
 	}
 	s.QERIDs[id] = struct{}{}
+	s.log.Debugf("CreateQER QERID[%#x]", id)
 	return nil
 }
 
 func (s *Sess) UpdateQER(req *ie.IE) error {
+	id, err := req.QERID()
+	if err != nil {
+		return err
+	}
+	s.log.Debugf("UpdateQER QERID[%#x]", id)
 	return s.rnode.driver.UpdateQER(s.LocalID, req)
 }
 
@@ -170,6 +190,7 @@ func (s *Sess) RemoveQER(req *ie.IE) error {
 		return err
 	}
 	delete(s.QERIDs, id)
+	s.log.Debugf("RemoveQER QERID[%#x]", id)
 	return nil
 }
 
@@ -184,10 +205,17 @@ func (s *Sess) CreateURR(req *ie.IE) error {
 		return err
 	}
 	s.URRIDs[id] = 0
+	s.log.Debugf("CreateURR URRID[%#x]", id)
 	return nil
 }
 
 func (s *Sess) UpdateURR(req *ie.IE) ([]report.USAReport, error) {
+	id, err := req.URRID()
+	if err != nil {
+		return nil, err
+	}
+	s.log.Debugf("UpdateURR URRID[%#x]", id)
+
 	usars, err := s.rnode.driver.UpdateURR(s.LocalID, req)
 	if err != nil {
 		return nil, err
@@ -216,6 +244,7 @@ func (s *Sess) RemoveURR(req *ie.IE) ([]report.USAReport, error) {
 		return nil, err
 	}
 	delete(s.URRIDs, id)
+	s.log.Debugf("RemoveURR URRID[%#x]", id)
 	return usars, nil
 }
 
@@ -230,10 +259,16 @@ func (s *Sess) CreateBAR(req *ie.IE) error {
 		return err
 	}
 	s.BARIDs[id] = struct{}{}
+	s.log.Debugf("CreateBAR BARID[%#x]", id)
 	return nil
 }
 
 func (s *Sess) UpdateBAR(req *ie.IE) error {
+	id, err := req.BARID()
+	if err != nil {
+		return err
+	}
+	s.log.Debugf("UpdateBAR BARID[%#x]", id)
 	return s.rnode.driver.UpdateBAR(s.LocalID, req)
 }
 
@@ -248,6 +283,7 @@ func (s *Sess) RemoveBAR(req *ie.IE) error {
 		return err
 	}
 	delete(s.BARIDs, id)
+	s.log.Debugf("RemoveBAR BARID[%#x]", id)
 	return nil
 }
 
@@ -262,9 +298,9 @@ func (s *Sess) Push(pdrid uint16, p []byte) {
 
 	select {
 	case q <- pkt:
-		s.log.Debugf("Push bufPkt to q[%d](len:%d)", pdrid, len(q))
+		s.log.Infof("Push bufPkt to q[%d](len:%d)", pdrid, len(q))
 	default:
-		s.log.Debugf("q[%d](len:%d) is full, drop it", pdrid, len(q))
+		s.log.Warnf("q[%d](len:%d) is full, drop it", pdrid, len(q))
 	}
 }
 
@@ -283,7 +319,7 @@ func (s *Sess) Pop(pdrid uint16) ([]byte, bool) {
 	}
 	select {
 	case pkt := <-q:
-		s.log.Debugf("Pop bufPkt from q[%d](len:%d)", pdrid, len(q))
+		s.log.Infof("Pop bufPkt from q[%d](len:%d)", pdrid, len(q))
 		return pkt, true
 	default:
 		return nil, false
@@ -344,7 +380,11 @@ func (n *RemoteNode) NewSess(rSeid uint64) *Sess {
 	s := n.local.NewSess(rSeid, BUFFQ_LEN)
 	n.sess[s.LocalID] = struct{}{}
 	s.rnode = n
-	s.log = n.log.WithField(logger.FieldSessionID, fmt.Sprintf("SEID:L(%#x),R(%#x)", s.LocalID, rSeid))
+	s.log = n.log.WithFields(
+		logrus.Fields{
+			logger.FieldLocalSEID:  fmt.Sprintf("lSeid:%#x", s.LocalID),
+			logger.FieldRemoteSEID: fmt.Sprintf("rSeid:%#x", rSeid),
+		})
 	s.log.Infoln("New session")
 	return s
 }

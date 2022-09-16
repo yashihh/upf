@@ -11,7 +11,7 @@ func (s *PfcpServer) handleAssociationSetupRequest(
 	req *message.AssociationSetupRequest,
 	addr net.Addr,
 ) {
-	s.log.Infoln("handleAssociationSetupRequest")
+	s.log.Infof("handleAssociationSetupRequest SEQ[%#x]", req.SequenceNumber)
 
 	if req.NodeID == nil {
 		s.log.Errorln("not found NodeID")
@@ -37,7 +37,7 @@ func (s *PfcpServer) handleAssociationSetupRequest(
 	s.rnodes[rnodeid] = node
 
 	rsp := message.NewAssociationSetupResponse(
-		req.Header.SequenceNumber,
+		req.SequenceNumber,
 		newIeNodeID(s.nodeID),
 		ie.NewCause(ie.CauseRequestAccepted),
 		ie.NewRecoveryTimeStamp(s.recoveryTime),

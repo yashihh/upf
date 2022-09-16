@@ -8,10 +8,10 @@ import (
 )
 
 func (s *PfcpServer) handleHeartbeatRequest(req *message.HeartbeatRequest, addr net.Addr) {
-	s.log.Infoln("handleHeartbeatRequest")
+	s.log.Infof("handleHeartbeatRequest SEQ[%#x]", req.SequenceNumber)
 
 	rsp := message.NewHeartbeatResponse(
-		req.Header.SequenceNumber,
+		req.SequenceNumber,
 		ie.NewRecoveryTimeStamp(s.recoveryTime),
 	)
 

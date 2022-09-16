@@ -128,7 +128,7 @@ func (s *PfcpServer) main(wg *sync.WaitGroup) {
 				continue
 			}
 
-			trID := fmt.Sprintf("%s-%d", rcvPkt.RemoteAddr, msg.Sequence())
+			trID := TransactionID(rcvPkt.RemoteAddr, msg.Sequence())
 			if isRequest(msg) {
 				s.log.Tracef("receive req pkt from %s", trID)
 				rx, ok := s.rxTrans[trID]
@@ -287,7 +287,7 @@ func (s *PfcpServer) sendRspTo(msg message.Message, addr net.Addr) error {
 	}
 
 	// find transaction
-	trID := fmt.Sprintf("%s-%d", addr, msg.Sequence())
+	trID := TransactionID(addr, msg.Sequence())
 	rxtr, ok := s.rxTrans[trID]
 	if !ok {
 		return errors.Errorf("sendRspTo: rxtr(%s) not found", trID)

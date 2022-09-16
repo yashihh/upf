@@ -22,9 +22,10 @@ var (
 const (
 	FieldCategory     string = "category"
 	FieldListenAddr   string = "listen_addr"
-	FieldRemoteNodeID string = "rnode_id"
-	FieldSessionID    string = "session_id"
 	FieldTransction   string = "transaction"
+	FieldRemoteNodeID string = "rnode_id"
+	FieldLocalSEID    string = "local_seid"
+	FieldRemoteSEID   string = "remote_seid"
 )
 
 func init() {
@@ -37,12 +38,8 @@ func init() {
 		NoFieldsSpace:   true,
 		HideKeys:        true,
 		FieldsOrder: []string{
-			"component",
-			"category",
-			FieldListenAddr,
-			FieldRemoteNodeID,
-			FieldSessionID,
-			FieldTransction,
+			"component", "category", FieldListenAddr, FieldTransction,
+			FieldRemoteNodeID, FieldLocalSEID, FieldRemoteSEID,
 		},
 	}
 
