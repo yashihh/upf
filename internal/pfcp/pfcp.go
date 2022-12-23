@@ -20,7 +20,7 @@ import (
 
 const (
 	RECEIVE_CHANNEL_LEN       = 512
-	REPORT_CHANNEL_LEN        = 64
+	REPORT_CHANNEL_LEN        = 128
 	TRANS_TIMEOUT_CHANNEL_LEN = 64
 	MAX_PFCP_MSG_LEN          = 65536
 )
@@ -128,7 +128,7 @@ func (s *PfcpServer) main(wg *sync.WaitGroup) {
 				continue
 			}
 
-			trID := TransactionID(rcvPkt.RemoteAddr, msg.Sequence())
+			trID := fmt.Sprintf("%s-%d", rcvPkt.RemoteAddr, msg.Sequence())
 			if isRequest(msg) {
 				s.log.Tracef("receive req pkt from %s", trID)
 				rx, ok := s.rxTrans[trID]
@@ -287,7 +287,7 @@ func (s *PfcpServer) sendRspTo(msg message.Message, addr net.Addr) error {
 	}
 
 	// find transaction
-	trID := TransactionID(addr, msg.Sequence())
+	trID := fmt.Sprintf("%s-%d", addr, msg.Sequence())
 	rxtr, ok := s.rxTrans[trID]
 	if !ok {
 		return errors.Errorf("sendRspTo: rxtr(%s) not found", trID)

@@ -14,8 +14,7 @@ func (s *PfcpServer) handleSessionEstablishmentRequest(
 	addr net.Addr,
 ) {
 	// TODO: error response
-	s.log.Infof("handleSessionEstablishmentRequest SEQ[%#x] SEID[%#x]",
-		req.SequenceNumber, req.SEID())
+	s.log.Infoln("handleSessionEstablishmentRequest")
 
 	if req.NodeID == nil {
 		s.log.Errorln("not found NodeID")
@@ -96,7 +95,7 @@ func (s *PfcpServer) handleSessionEstablishmentRequest(
 		0,             // mp
 		0,             // fo
 		sess.RemoteID, // seid
-		req.SequenceNumber,
+		req.Header.SequenceNumber,
 		0, // pri
 		newIeNodeID(s.nodeID),
 		ie.NewCause(ie.CauseRequestAccepted),
@@ -115,16 +114,16 @@ func (s *PfcpServer) handleSessionModificationRequest(
 	addr net.Addr,
 ) {
 	// TODO: error response
+	s.log.Infoln("handleSessionModificationRequest")
 
 	sess, err := s.lnode.Sess(req.SEID())
 	if err != nil {
-		s.log.Errorf("handleSessionModificationRequest SEQ[%#x] SEID[%#x]: %v",
-			req.SequenceNumber, req.SEID(), err)
+		s.log.Errorf("handleSessionModificationRequest: %v", err)
 		rsp := message.NewSessionModificationResponse(
 			0, // mp
 			0, // fo
 			0, // seid
-			req.SequenceNumber,
+			req.Header.SequenceNumber,
 			0, // pri
 			ie.NewCause(ie.CauseSessionContextNotFound),
 		)
@@ -136,8 +135,6 @@ func (s *PfcpServer) handleSessionModificationRequest(
 		}
 		return
 	}
-	sess.log.Infof("handleSessionModificationRequest SEQ[%#x] SEID[%#x]",
-		req.SequenceNumber, req.SEID())
 
 	if req.NodeID != nil {
 		// TS 29.244 7.5.4:
@@ -205,12 +202,13 @@ func (s *PfcpServer) handleSessionModificationRequest(
 
 	var usars []report.USAReport
 	for _, i := range req.RemoveURR {
-		rpts, err1 := sess.RemoveURR(i)
+		rs, err1 := sess.RemoveURR(i)
 		if err1 != nil {
 			sess.log.Errorf("Mod RemoveURR error: %+v", err1)
+			continue
 		}
-		if len(rpts) > 0 {
-			usars = append(usars, rpts...)
+		if len(rs) > 0 {
+			usars = append(usars, rs...)
 		}
 	}
 
@@ -222,9 +220,12 @@ func (s *PfcpServer) handleSessionModificationRequest(
 	}
 
 	for _, i := range req.RemovePDR {
-		err = sess.RemovePDR(i)
-		if err != nil {
-			sess.log.Errorf("Mod RemovePDR error: %+v", err)
+		rs, err1 := sess.RemovePDR(i)
+		if err1 != nil {
+			sess.log.Errorf("Mod RemovePDR error: %+v", err1)
+		}
+		if len(rs) > 0 {
+			usars = append(usars, rs...)
 		}
 	}
 
@@ -243,12 +244,13 @@ func (s *PfcpServer) handleSessionModificationRequest(
 	}
 
 	for _, i := range req.UpdateURR {
-		rpts, err1 := sess.UpdateURR(i)
+		rs, err1 := sess.UpdateURR(i)
 		if err1 != nil {
 			sess.log.Errorf("Mod UpdateURR error: %+v", err1)
+			continue
 		}
-		if len(rpts) > 0 {
-			usars = append(usars, rpts...)
+		if len(rs) > 0 {
+			usars = append(usars, rs...)
 		}
 	}
 
@@ -260,9 +262,23 @@ func (s *PfcpServer) handleSessionModificationRequest(
 	}
 
 	for _, i := range req.UpdatePDR {
-		err = sess.UpdatePDR(i)
-		if err != nil {
-			sess.log.Errorf("Mod UpdatePDR error: %+v", err)
+		rs, err1 := sess.UpdatePDR(i)
+		if err1 != nil {
+			sess.log.Errorf("Mod UpdatePDR error: %+v", err1)
+		}
+		if len(rs) > 0 {
+			usars = append(usars, rs...)
+		}
+	}
+
+	for _, i := range req.QueryURR {
+		rs, err1 := sess.QueryURR(i)
+		if err1 != nil {
+			sess.log.Errorf("Mod QueryURR error: %+v", err1)
+			continue
+		}
+		if len(rs) > 0 {
+			usars = append(usars, rs...)
 		}
 	}
 
@@ -270,15 +286,26 @@ func (s *PfcpServer) handleSessionModificationRequest(
 		0,             // mp
 		0,             // fo
 		sess.RemoteID, // seid
-		req.SequenceNumber,
+		req.Header.SequenceNumber,
 		0, // pri
 		ie.NewCause(ie.CauseRequestAccepted),
 	)
 	for _, r := range usars {
+		urrInfo, ok := sess.URRIDs[r.URRID]
+		if !ok {
+			sess.log.Warnf("Sess Mod: URRInfo[%#x] not found", r.URRID)
+			continue
+		}
+		r.URSEQN = sess.URRSeq(r.URRID)
 		rsp.UsageReport = append(rsp.UsageReport,
 			ie.NewUsageReportWithinSessionModificationResponse(
-				r.IEsWithinSessModRsp()...,
+				r.IEsWithinSessModRsp(
+					urrInfo.MeasureMethod, urrInfo.MeasureInformation)...,
 			))
+
+		if urrInfo.removed {
+			delete(sess.URRIDs, r.URRID)
+		}
 	}
 
 	err = s.sendRspTo(rsp, addr)
@@ -293,19 +320,20 @@ func (s *PfcpServer) handleSessionDeletionRequest(
 	addr net.Addr,
 ) {
 	// TODO: error response
+	s.log.Infoln("handleSessionDeletionRequest")
 
 	lSeid := req.SEID()
 	sess, err := s.lnode.Sess(lSeid)
 	if err != nil {
-		s.log.Errorf("handleSessionDeletionRequest SEQ[%#x] SEID[%#x]: %v",
-			req.SequenceNumber, req.SEID(), err)
+		s.log.Errorf("handleSessionDeletionRequest: %v", err)
 		rsp := message.NewSessionDeletionResponse(
 			0, // mp
 			0, // fo
 			0, // seid
-			req.SequenceNumber,
+			req.Header.SequenceNumber,
 			0, // pri
 			ie.NewCause(ie.CauseSessionContextNotFound),
+			ie.NewReportType(0, 0, 1, 0),
 		)
 
 		err = s.sendRspTo(rsp, addr)
@@ -315,8 +343,6 @@ func (s *PfcpServer) handleSessionDeletionRequest(
 		}
 		return
 	}
-	sess.log.Infof("handleSessionDeletionRequest SEQ[%#x] SEID[%#x]",
-		req.SequenceNumber, req.SEID())
 
 	usars := sess.rnode.DeleteSess(lSeid)
 
@@ -324,15 +350,28 @@ func (s *PfcpServer) handleSessionDeletionRequest(
 		0,             // mp
 		0,             // fo
 		sess.RemoteID, // seid
-		req.SequenceNumber,
+		req.Header.SequenceNumber,
 		0, // pri
 		ie.NewCause(ie.CauseRequestAccepted),
 	)
 	for _, r := range usars {
+		urrInfo, ok := sess.URRIDs[r.URRID]
+		if !ok {
+			sess.log.Warnf("Sess Del: URRInfo[%#x] not found", r.URRID)
+			continue
+		}
+		r.URSEQN = sess.URRSeq(r.URRID)
+		// indicates usage report being reported for a URR due to the termination of the PFCP session
+		r.USARTrigger.Flags |= report.USAR_TRIG_TERMR
 		rsp.UsageReport = append(rsp.UsageReport,
 			ie.NewUsageReportWithinSessionDeletionResponse(
-				r.IEsWithinSessDelRsp()...,
+				r.IEsWithinSessDelRsp(
+					urrInfo.MeasureMethod, urrInfo.MeasureInformation)...,
 			))
+
+		if urrInfo.removed {
+			delete(sess.URRIDs, r.URRID)
+		}
 	}
 
 	err = s.sendRspTo(rsp, addr)
@@ -347,8 +386,7 @@ func (s *PfcpServer) handleSessionReportResponse(
 	addr net.Addr,
 	req message.Message,
 ) {
-	s.log.Infof("handleSessionReportResponse SEQ[%#x] SEID[%#x]",
-		rsp.SequenceNumber, req.SEID())
+	s.log.Infoln("handleSessionReportResponse")
 
 	s.log.Debugf("seid: %#x\n", rsp.SEID())
 	if rsp.Header.SEID == 0 {
@@ -375,7 +413,6 @@ func (s *PfcpServer) handleSessionReportRequestTimeout(
 	req *message.SessionReportRequest,
 	addr net.Addr,
 ) {
-	s.log.Warnf("handleSessionReportRequestTimeout SEQ[%#x] SEID[%#x]",
-		req.SequenceNumber, req.SEID())
+	s.log.Warnf("handleSessionReportRequestTimeout: SEID[%#x]", req.SEID())
 	// TODO?
 }

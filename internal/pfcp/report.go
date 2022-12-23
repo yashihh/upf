@@ -58,11 +58,12 @@ func (s *PfcpServer) ServeReport(sr *report.SessReport) {
 }
 
 func (s *PfcpServer) serveDLDReport(addr net.Addr, lSeid uint64, pdrid uint16) error {
+	s.log.Infoln("serveDLDReport")
+
 	sess, err := s.lnode.Sess(lSeid)
 	if err != nil {
 		return errors.Wrap(err, "serveDLDReport")
 	}
-	sess.log.Infof("serveDLDReport: pdrid[%d]", pdrid)
 
 	req := message.NewSessionReportRequest(
 		0,
@@ -89,11 +90,12 @@ func (s *PfcpServer) serveDLDReport(addr net.Addr, lSeid uint64, pdrid uint16) e
 }
 
 func (s *PfcpServer) serveUSAReport(addr net.Addr, lSeid uint64, usars []report.USAReport) error {
+	s.log.Infoln("serveUSAReport")
+
 	sess, err := s.lnode.Sess(lSeid)
 	if err != nil {
 		return errors.Wrap(err, "serveUSAReport")
 	}
-	sess.log.Infoln("serveUSAReport")
 
 	req := message.NewSessionReportRequest(
 		0,
@@ -104,10 +106,16 @@ func (s *PfcpServer) serveUSAReport(addr net.Addr, lSeid uint64, usars []report.
 		ie.NewReportType(0, 0, 1, 0),
 	)
 	for _, r := range usars {
+		urrInfo, ok := sess.URRIDs[r.URRID]
+		if !ok {
+			sess.log.Warnf("serveUSAReport: URRInfo[%#x] not found", r.URRID)
+			continue
+		}
 		r.URSEQN = sess.URRSeq(r.URRID)
 		req.UsageReport = append(req.UsageReport,
 			ie.NewUsageReportWithinSessionReportRequest(
-				r.IEsWithinSessReportReq()...,
+				r.IEsWithinSessReportReq(
+					urrInfo.MeasureMethod, urrInfo.MeasureInformation)...,
 			))
 	}
 

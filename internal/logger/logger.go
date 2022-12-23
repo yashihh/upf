@@ -16,16 +16,16 @@ var (
 	CfgLog   *logrus.Entry
 	PfcpLog  *logrus.Entry
 	BuffLog  *logrus.Entry
+	PerioLog *logrus.Entry
 	FwderLog *logrus.Entry
 )
 
 const (
 	FieldCategory     string = "category"
 	FieldListenAddr   string = "listen_addr"
-	FieldTransction   string = "transaction"
 	FieldRemoteNodeID string = "rnode_id"
-	FieldLocalSEID    string = "local_seid"
-	FieldRemoteSEID   string = "remote_seid"
+	FieldSessionID    string = "session_id"
+	FieldTransction   string = "transaction"
 )
 
 func init() {
@@ -33,13 +33,17 @@ func init() {
 	log.SetReportCaller(false)
 
 	log.Formatter = &formatter.Formatter{
-		TimestampFormat: time.RFC3339,
+		TimestampFormat: time.RFC3339Nano,
 		TrimMessages:    true,
 		NoFieldsSpace:   true,
 		HideKeys:        true,
 		FieldsOrder: []string{
-			"component", "category", FieldListenAddr, FieldTransction,
-			FieldRemoteNodeID, FieldLocalSEID, FieldRemoteSEID,
+			"component",
+			"category",
+			FieldListenAddr,
+			FieldRemoteNodeID,
+			FieldSessionID,
+			FieldTransction,
 		},
 	}
 
@@ -47,6 +51,7 @@ func init() {
 	CfgLog = log.WithFields(logrus.Fields{"component": "UPF", FieldCategory: "Cfg"})
 	PfcpLog = log.WithFields(logrus.Fields{"component": "UPF", FieldCategory: "Pfcp"})
 	BuffLog = log.WithFields(logrus.Fields{"component": "UPF", FieldCategory: "Buff"})
+	PerioLog = log.WithFields(logrus.Fields{"component": "UPF", FieldCategory: "Perio"})
 	FwderLog = log.WithFields(logrus.Fields{"component": "UPF"})
 }
 
