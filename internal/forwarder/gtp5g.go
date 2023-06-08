@@ -1090,8 +1090,8 @@ func (g *Gtp5g) CreateURR(lSeid uint64, req *ie.IE) error {
 	var urrid uint32
 	var measureMethod uint8
 	var rptTrig report.ReportingTrigger
-	var measurePeriod time.Duration
 	var attrs []nl.Attr
+	var measurePeriod time.Duration
 
 	ies, err := req.CreateURR()
 	if err != nil {
@@ -1132,6 +1132,9 @@ func (g *Gtp5g) CreateURR(lSeid uint64, req *ie.IE) error {
 			if err != nil {
 				return err
 			}
+			if measurePeriod <= 0 {
+				return errors.New("invalid measurement period")
+			}
 			// TODO: convert time.Duration -> ?
 			attrs = append(attrs, nl.Attr{
 				Type:  gtp5gnl.URR_MEASUREMENT_PERIOD,
@@ -1168,6 +1171,9 @@ func (g *Gtp5g) CreateURR(lSeid uint64, req *ie.IE) error {
 	}
 
 	if rptTrig.PERIO() {
+		if measurePeriod <= 0 {
+			return errors.New("invalid measurement period")
+		}
 		g.ps.AddPeriodReportTimer(lSeid, urrid, measurePeriod)
 	}
 
