@@ -12,6 +12,7 @@ import (
 
 	"github.com/free5gc/go-upf/internal/forwarder"
 	"github.com/free5gc/go-upf/internal/logger"
+	"github.com/free5gc/go-upf/internal/nwtt"
 	"github.com/free5gc/go-upf/internal/pfcp"
 	"github.com/free5gc/go-upf/pkg/factory"
 )
@@ -22,6 +23,7 @@ type UpfApp struct {
 	cfg        *factory.Config
 	driver     forwarder.Driver
 	pfcpServer *pfcp.PfcpServer
+	nwtt       *nwtt.NWTTServer
 }
 
 func NewApp(cfg *factory.Config) (*UpfApp, error) {
@@ -82,6 +84,16 @@ func (u *UpfApp) Run() error {
 	u.pfcpServer.Start(&u.wg)
 
 	logger.MainLog.Infoln("UPF started")
+
+	u.nwtt, err = nwtt.NewNWTTServer(u.cfg, u.driver)
+	if err != nil {
+		logger.MainLog.Errorf("UPF NWTT Run err: %v", err)
+	}
+	err = u.nwtt.Init()
+	if err != nil {
+		logger.MainLog.Errorf("UPF NWTT Run err: %v", err)
+	}
+	logger.MainLog.Infoln("NWTT started")
 
 	// Wait for interrupt signal to gracefully shutdown
 	sigCh := make(chan os.Signal, 1)
