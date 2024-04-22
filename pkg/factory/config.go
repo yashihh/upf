@@ -22,6 +22,7 @@ type Config struct {
 	Gtpu        *Gtpu     `yaml:"gtpu"        valid:"required"`
 	DnnList     []DnnList `yaml:"dnnList"     valid:"required"`
 	Logger      *Logger   `yaml:"logger"      valid:"required"`
+	NWTT        *NWTT     `yaml:"nwtt"      valid:"optional"`
 }
 
 type Pfcp struct {
@@ -54,6 +55,10 @@ type Logger struct {
 	Enable       bool   `yaml:"enable"       valid:"optional"`
 	Level        string `yaml:"level"        valid:"required,in(trace|debug|info|warn|error|fatal|panic)"`
 	ReportCaller bool   `yaml:"reportCaller" valid:"optional"`
+}
+type NWTT struct {
+	NwttPorts string `yaml:"nwttports"       valid:"required"`
+	DsttPorts string `yaml:"dsttports"       valid:"required"`
 }
 
 func (c *Config) GetVersion() string {
