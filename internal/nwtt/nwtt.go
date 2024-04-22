@@ -2,7 +2,6 @@ package nwtt
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"os/exec"
 
@@ -10,13 +9,11 @@ import (
 	"github.com/free5gc/go-upf/internal/logger"
 	"github.com/free5gc/go-upf/pkg/factory"
 	logger_util "github.com/free5gc/util/logger"
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
 
 type NWTTServer struct {
-	cfg   *factory.Config //undone
-	laddr string
+	cfg *factory.Config //undone
 	// BridgeMacAddress net.HardwareAddr
 	// NumOfNWTTPorts   uint32
 	// NumOfDSTTPorts   uint32
@@ -43,24 +40,9 @@ type NWTTServer struct {
 }
 
 func NewNWTTServer(cfg *factory.Config, driver forwarder.Driver) (*NWTTServer, error) {
-	cfgGtpu := cfg.Gtpu
-	if cfgGtpu == nil {
-		return nil, errors.Errorf("no Gtpu config")
-	}
 
-	var gtpuAddr string
-	if cfgGtpu.Forwarder == "gtp5g" {
-		for _, ifInfo := range cfgGtpu.IfList {
-			gtpuAddr = fmt.Sprintf("%s", ifInfo.Addr)
-			break
-		}
-		if gtpuAddr == "" {
-			return nil, errors.Errorf("not found GTP address")
-		}
-	}
 	return &NWTTServer{
-		cfg:   cfg,
-		laddr: gtpuAddr,
+		cfg: cfg,
 		// BridgeMacAddress:       MacAddress,
 		// NumOfNWTTPorts:         uint32(len(nwttports)),
 		// NumOfDSTTPorts:         uint32(len(dsttports)),
