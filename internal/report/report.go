@@ -30,6 +30,16 @@ type Report interface {
 	Type() ReportType
 }
 
+type TMIReport struct {
+	PMIC    []byte
+	UMIC    []byte
+	PortNum uint32
+}
+
+func (r TMIReport) Type() ReportType {
+	return TMIR
+}
+
 type DLDReport struct {
 	PDRID  uint16
 	Action uint16

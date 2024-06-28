@@ -8,6 +8,7 @@ import (
 
 	"github.com/free5gc/go-upf/internal/forwarder"
 	"github.com/free5gc/go-upf/internal/logger"
+	"github.com/free5gc/go-upf/internal/report"
 	"github.com/free5gc/go-upf/pkg/factory"
 	logger_util "github.com/free5gc/util/logger"
 	"github.com/pkg/errors"
@@ -32,7 +33,7 @@ type NWTTServer struct {
 	/* PortNum -> Capability -> boolean*/
 	PortCapabilityList          map[uint32]map[uint16]bool
 	UserPlaneNodeCapabilityList map[uint16]bool
-	// pfcp                 report.NWTThandler
+	handler                     report.Handler
 	// ThresholdVal         ThresholdMesurement
 	ctx    context.Context
 	cancel context.CancelFunc
@@ -77,7 +78,7 @@ func NewNWTTServer(cfg *factory.Config, driver forwarder.Driver) (*NWTTServer, e
 		UserPlaneNodeCapabilityList: make(map[uint16]bool),
 		// LLDPAdminStatus:        LLDPrxtx,
 		// PortslldpAdminStatus:   make(map[uint32]uint8),
-		// pfcp:                   nil,
+		handler: nil,
 		// ThresholdVal:           ThresholdMesurement{0, 0, "", 0},
 		ctx:    nil,
 		cancel: nil,
@@ -89,31 +90,85 @@ func (n *NWTTServer) Init() error {
 	n.CreatePortCapability()
 	n.CreateUserPlaneNodeCapability()
 
+	// Init
+	n.ReportTSCmanagemantInformation()
 	return nil
 }
 
 /* 24.539 9.3 Port management capability */
 func (n *NWTTServer) CreatePortCapability() error {
+	for _, i := range n.ListOfNWTTPorts {
+		n.PortCapabilityList[i] = map[uint16]bool{
+			PMIC_SupportedPTPInstanceTypes:     SUPPORT,
+			PMIC_SupportedTransportTypes:       SUPPORT,
+			PMIC_SupportedDelayMechanisms:      SUPPORT,
+			PMIC_PTPGrandmasterCapable:         UNSUPPORT,
+			PMIC_gPTPGrandmasterCapable:        UNSUPPORT,
+			PMIC_SupportedPTPProfiles:          SUPPORT,
+			PMIC_NumberOfSupportedPTPInstances: UNSUPPORT,
+			PMIC_PTPInstanceList:               UNSUPPORT,
+		}
+	}
 	return nil
 }
 
-/* 24.539 9.3 Port management capability */
+/* 24.539 9.5C User Plane Node management capability */
 func (n *NWTTServer) CreateUserPlaneNodeCapability() error {
 	n.UserPlaneNodeCapabilityList = map[uint16]bool{
 		/* Information for 5GS Bridge(Read only) */
-		UserPlaneNodeAddress: false,
-		UserPlaneNodeID:      false,
-		NWTTPortNumbers:      false,
+		UMIC_UserPlaneNodeAddress: UNSUPPORT,
+		UMIC_UserPlaneNodeID:      SUPPORT,
+		UMIC_NWTTPortNumbers:      UNSUPPORT,
 		/* Time synchronization information(Read only) */
-		SupportedPTPInstanceType:            false,
-		SupportedTransportTypes:             false,
-		SupportedDelayMechanisms:            false,
-		PTPGrandmasterCapable:               false,
-		GPTPGrandmasterCapable:              false,
-		SupportedPTPProfiles:                false,
-		NumberOfSupportedPTPInstances:       false,
-		DSTTPortTimeSynchronizationInfoList: false,
-		PTPInstanceSpecification:            false,
+		UMIC_SupportedPTPInstanceType:            UNSUPPORT,
+		UMIC_SupportedTransportTypes:             UNSUPPORT,
+		UMIC_SupportedDelayMechanisms:            SUPPORT,
+		UMIC_PTPGrandmasterCapable:               UNSUPPORT,
+		UMIC_GPTPGrandmasterCapable:              UNSUPPORT,
+		UMIC_SupportedPTPProfiles:                SUPPORT,
+		UMIC_NumberOfSupportedPTPInstances:       UNSUPPORT,
+		UMIC_DSTTPortTimeSynchronizationInfoList: UNSUPPORT,
+		UMIC_PTPInstanceSpecification:            UNSUPPORT,
 	}
+	return nil
+}
+
+func (n *NWTTServer) ReportTSCmanagemantInformation() error {
+	var tmirs []report.TMIReport
+	umic, err := n.EncodeUserPlaneNodeManagementCapability()
+	if err != nil {
+		n.log.Errorln("EncodeUserPlaneNodeManagementCapability", err)
+		return err
+	}
+	if n.handler != nil {
+		// TODO: get SEID
+		n.handler.NotifySessReport(report.SessReport{
+			SEID: 1, // SEID(Session Endpoint Identifier)
+			Reports: []report.Report{
+				report.TMIReport{
+					PMIC: umic,
+				}},
+		})
+	}
+	// TODO: different pmic map to different port
+	for _, i := range n.ListOfNWTTPorts {
+		pmic, err := n.EncodePortManagementCapability(i)
+		if err != nil {
+			n.log.Errorln("EncodePortManagementCapability", err)
+			return err
+		}
+		if n.handler != nil {
+			// TODO: get SEID
+			n.handler.NotifySessReport(report.SessReport{
+				SEID: 1, // SEID(Session Endpoint Identifier)
+				Reports: []report.Report{
+					report.TMIReport{
+						PMIC:    pmic,
+						PortNum: i,
+					}},
+			})
+		}
+	}
+
 	return nil
 }

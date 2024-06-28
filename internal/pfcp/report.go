@@ -27,6 +27,7 @@ func (s *PfcpServer) ServeReport(sr *report.SessReport) {
 	}
 
 	var usars []report.USAReport
+
 	for _, rpt := range sr.Reports {
 		switch r := rpt.(type) {
 		case report.DLDReport:
@@ -44,6 +45,21 @@ func (s *PfcpServer) ServeReport(sr *report.SessReport) {
 		case report.USAReport:
 			s.log.Debugf("ServeReport: SEID(%#x), type(%s)", sr.SEID, r.Type())
 			usars = append(usars, r)
+		case report.TMIReport:
+			s.log.Debugf("ServeReport: SEID(%#x), type(%s)", sr.SEID, r.Type())
+			if len(r.PMIC)&len(r.UMIC) == 0 {
+				return
+			}
+			if r.PortNum > 0 {
+				return
+			}
+			err := s.serveTMIReport(laddr, sr.SEID, r.UMIC, r.PMIC, r.PortNum)
+
+			// tmirs = append(tmirs, r)
+			// err := s.serveTMIReport(laddr, sr.SEID, tmirs)
+			if err != nil {
+				s.log.Errorln(err)
+			}
 		default:
 			s.log.Warnf("Unsupported Report: SEID(%#x), type(%d)", sr.SEID, rpt.Type())
 		}
@@ -71,7 +87,7 @@ func (s *PfcpServer) serveDLDReport(addr net.Addr, lSeid uint64, pdrid uint16) e
 		sess.RemoteID,
 		0,
 		0,
-		ie.NewReportType(0, 0, 0, 1),
+		ie.NewReportType(0, 0, 0, 0, 1),
 		ie.NewDownlinkDataReport(
 			ie.NewPDRID(pdrid),
 			/*
@@ -90,7 +106,7 @@ func (s *PfcpServer) serveDLDReport(addr net.Addr, lSeid uint64, pdrid uint16) e
 }
 
 func (s *PfcpServer) serveUSAReport(addr net.Addr, lSeid uint64, usars []report.USAReport) error {
-	s.log.Infoln("serveUSAReport")
+	s.log.Infoln("serveUSAReport %x", lSeid)
 
 	sess, err := s.lnode.Sess(lSeid)
 	if err != nil {
@@ -103,7 +119,7 @@ func (s *PfcpServer) serveUSAReport(addr net.Addr, lSeid uint64, usars []report.
 		sess.RemoteID,
 		0,
 		0,
-		ie.NewReportType(0, 0, 1, 0),
+		ie.NewReportType(0, 0, 0, 1, 0),
 	)
 	for _, r := range usars {
 		urrInfo, ok := sess.URRIDs[r.URRID]
@@ -121,4 +137,46 @@ func (s *PfcpServer) serveUSAReport(addr net.Addr, lSeid uint64, usars []report.
 
 	err = s.sendReqTo(req, addr)
 	return errors.Wrap(err, "serveUSAReport")
+}
+
+func (s *PfcpServer) serveTMIReport(addr net.Addr, lSeid uint64, umic []byte, pmic []byte, PortNum uint32) error {
+	s.log.Infoln("serveTMIReport")
+
+	sess, err := s.lnode.Sess(lSeid)
+	if err != nil {
+		return errors.Wrap(err, "serveTMIReport")
+	}
+
+	// one UMIC for TSC
+	req := message.NewSessionReportRequest(
+		0,
+		0,
+		sess.RemoteID,
+		0,
+		0,
+		ie.NewReportType(1, 0, 0, 0, 0),
+		ie.NewTSCManagementInformationWithinSessionReportRequest(
+			ie.NewBridgeManagementInformationContainer(string(umic)),
+			ie.NewPortManagementInformationContainer(string(pmic)),
+			ie.NewNWTTPortNumber(PortNum),
+		),
+	)
+
+	// appendUMIC := true
+	// for _, r := range tmirs {
+	// 	if r.UMIC != nil && appendUMIC {
+	// 		req.TSCManagementInformation = append(req.TSCManagementInformation,
+	// 			ie.NewTSCManagementInformationWithinSessionReportRequest(
+	// 				ie.NewBridgeManagementInformationContainer(string(r.UMIC)),
+	// 			))
+	// 		appendUMIC = false
+	// 	}
+	// 	req.TSCManagementInformation = append(req.TSCManagementInformation,
+	// 		ie.NewTSCManagementInformationWithinSessionReportRequest(
+	// 			ie.NewPortManagementInformationContainer(string(r.PMIC)),
+	// 			ie.NewNWTTPortNumber(r.PortNums),
+	// 		))
+	// }
+	err = s.sendReqTo(req, addr)
+	return errors.Wrap(err, "serveTMIReport")
 }

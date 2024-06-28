@@ -1,6 +1,10 @@
 package nwtt
 
-import "time"
+import (
+	"encoding/binary"
+	"sort"
+	"time"
+)
 
 type ClockIdentity [8]byte
 
@@ -49,4 +53,26 @@ type PortDS struct {
 	VersionNumber           uint8
 	DelayAsymmetry          int64
 	PortEnable              bool // optional
+}
+
+func (n *NWTTServer) EncodeUserPlaneNodeManagementCapability() ([]byte, error) {
+	/* TODO: Get capabilities from structure*/
+	userPlaneNodeCapability := []byte{}
+	b := make([]byte, 2)
+	capabilities := []uint16{}
+	for idx, c := range n.UserPlaneNodeCapabilityList {
+		if c {
+			capabilities = append(capabilities, idx)
+		}
+	}
+	//Sort capabilities for test file return
+	sort.Slice(capabilities, func(i, j int) bool {
+		return capabilities[i] < capabilities[j]
+	})
+	for _, c := range capabilities {
+		binary.BigEndian.PutUint16(b, uint16(c))
+		userPlaneNodeCapability = append(userPlaneNodeCapability, b...)
+	}
+
+	return userPlaneNodeCapability, nil
 }

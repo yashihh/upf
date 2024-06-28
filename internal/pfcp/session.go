@@ -333,7 +333,7 @@ func (s *PfcpServer) handleSessionDeletionRequest(
 			req.Header.SequenceNumber,
 			0, // pri
 			ie.NewCause(ie.CauseSessionContextNotFound),
-			ie.NewReportType(0, 0, 1, 0),
+			ie.NewReportType(0, 0, 0, 1, 0),
 		)
 
 		err = s.sendRspTo(rsp, addr)
