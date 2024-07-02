@@ -79,16 +79,18 @@ func (u *UpfApp) Run() error {
 		return err
 	}
 
-	u.pfcpServer = pfcp.NewPfcpServer(u.cfg, u.driver)
+	u.nwtt, err = nwtt.NewNWTTServer(u.cfg, u.driver)
+	if err != nil {
+		logger.MainLog.Errorf("UPF NWTT Run err: %v", err)
+	}
+
+	u.pfcpServer = pfcp.NewPfcpServer(u.cfg, u.driver, u.nwtt)
 	u.driver.HandleReport(u.pfcpServer)
 	u.pfcpServer.Start(&u.wg)
 
 	logger.MainLog.Infoln("UPF started")
 
-	u.nwtt, err = nwtt.NewNWTTServer(u.cfg, u.driver)
-	if err != nil {
-		logger.MainLog.Errorf("UPF NWTT Run err: %v", err)
-	}
+	u.nwtt.HandlePfcp(u.pfcpServer)
 	err = u.nwtt.Init()
 	if err != nil {
 		logger.MainLog.Errorf("UPF NWTT Run err: %v", err)

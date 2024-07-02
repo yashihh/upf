@@ -14,6 +14,7 @@ import (
 
 	"github.com/free5gc/go-upf/internal/forwarder"
 	"github.com/free5gc/go-upf/internal/logger"
+	"github.com/free5gc/go-upf/internal/nwtt"
 	"github.com/free5gc/go-upf/internal/report"
 	"github.com/free5gc/go-upf/pkg/factory"
 	logger_util "github.com/free5gc/util/logger"
@@ -53,6 +54,7 @@ type PfcpServer struct {
 	conn         *net.UDPConn
 	recoveryTime time.Time
 	driver       forwarder.Driver
+	nwtt         *nwtt.NWTTServer
 	lnode        LocalNode
 	rnodes       map[string]*RemoteNode
 	txTrans      map[string]*TxTransaction // key: RemoteAddr-Sequence
@@ -61,7 +63,7 @@ type PfcpServer struct {
 	log          *logrus.Entry
 }
 
-func NewPfcpServer(cfg *factory.Config, driver forwarder.Driver) *PfcpServer {
+func NewPfcpServer(cfg *factory.Config, driver forwarder.Driver, nwtt *nwtt.NWTTServer) *PfcpServer {
 	listen := fmt.Sprintf("%s:%d", cfg.Pfcp.Addr, factory.UpfPfcpDefaultPort)
 	return &PfcpServer{
 		cfg:          cfg,
@@ -72,6 +74,7 @@ func NewPfcpServer(cfg *factory.Config, driver forwarder.Driver) *PfcpServer {
 		trToCh:       make(chan TransactionTimeout, TRANS_TIMEOUT_CHANNEL_LEN),
 		recoveryTime: time.Now(),
 		driver:       driver,
+		nwtt:         nwtt,
 		rnodes:       make(map[string]*RemoteNode),
 		txTrans:      make(map[string]*TxTransaction),
 		rxTrans:      make(map[string]*RxTransaction),

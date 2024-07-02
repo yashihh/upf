@@ -33,7 +33,7 @@ type NWTTServer struct {
 	/* PortNum -> Capability -> boolean*/
 	PortCapabilityList          map[uint32]map[uint16]bool
 	UserPlaneNodeCapabilityList map[uint16]bool
-	handler                     report.Handler
+	pfcpHandler                 report.Handler
 	// ThresholdVal         ThresholdMesurement
 	ctx    context.Context
 	cancel context.CancelFunc
@@ -78,7 +78,7 @@ func NewNWTTServer(cfg *factory.Config, driver forwarder.Driver) (*NWTTServer, e
 		UserPlaneNodeCapabilityList: make(map[uint16]bool),
 		// LLDPAdminStatus:        LLDPrxtx,
 		// PortslldpAdminStatus:   make(map[uint32]uint8),
-		handler: nil,
+		pfcpHandler: nil,
 		// ThresholdVal:           ThresholdMesurement{0, 0, "", 0},
 		ctx:    nil,
 		cancel: nil,
@@ -86,12 +86,17 @@ func NewNWTTServer(cfg *factory.Config, driver forwarder.Driver) (*NWTTServer, e
 	}, nil
 }
 
+func (n *NWTTServer) HandlePfcp(handler report.Handler) error {
+	if handler != nil {
+		n.pfcpHandler = handler
+		return nil
+	}
+	return errors.Errorf("PFCP server assign nil in NWTT.")
+}
+
 func (n *NWTTServer) Init() error {
 	n.CreatePortCapability()
 	n.CreateUserPlaneNodeCapability()
-
-	// Init
-	n.ReportTSCmanagemantInformation()
 	return nil
 }
 
@@ -133,17 +138,18 @@ func (n *NWTTServer) CreateUserPlaneNodeCapability() error {
 	return nil
 }
 
-func (n *NWTTServer) ReportTSCmanagemantInformation() error {
-	// var tmirs []report.TMIReport
+func (n *NWTTServer) ReportTSCmanagemantInformation(seid uint64) error {
+	n.log.Infoln("ReportTSCmanagemantInformation")
+
 	umic, err := n.EncodeUserPlaneNodeManagementCapability()
 	if err != nil {
 		n.log.Errorln("EncodeUserPlaneNodeManagementCapability", err)
 		return err
 	}
-	if n.handler != nil {
+	if n.pfcpHandler != nil {
 		// TODO: get SEID
-		n.handler.NotifySessReport(report.SessReport{
-			SEID: 1, // SEID(Session Endpoint Identifier)
+		n.pfcpHandler.NotifySessReport(report.SessReport{
+			SEID: seid, // SEID(Session Endpoint Identifier)
 			Reports: []report.Report{
 				report.TMIReport{
 					PMIC: umic,
@@ -157,10 +163,10 @@ func (n *NWTTServer) ReportTSCmanagemantInformation() error {
 			n.log.Errorln("EncodePortManagementCapability", err)
 			return err
 		}
-		if n.handler != nil {
+		if n.pfcpHandler != nil {
 			// TODO: get SEID
-			n.handler.NotifySessReport(report.SessReport{
-				SEID: 1, // SEID(Session Endpoint Identifier)
+			n.pfcpHandler.NotifySessReport(report.SessReport{
+				SEID: seid, // SEID(Session Endpoint Identifier)
 				Reports: []report.Report{
 					report.TMIReport{
 						PMIC:    pmic,

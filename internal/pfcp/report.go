@@ -50,7 +50,7 @@ func (s *PfcpServer) ServeReport(sr *report.SessReport) {
 			if len(r.PMIC)&len(r.UMIC) == 0 {
 				return
 			}
-			if r.PortNum > 0 {
+			if r.PortNum < 0 {
 				return
 			}
 			err := s.serveTMIReport(laddr, sr.SEID, r.UMIC, r.PMIC, r.PortNum)

@@ -107,6 +107,9 @@ func (s *PfcpServer) handleSessionEstablishmentRequest(
 		s.log.Errorln(err)
 		return
 	}
+
+	s.log.Infoln("ReportTSCmanagemantInformation")
+	s.nwtt.ReportTSCmanagemantInformation(fseid.SEID)
 }
 
 func (s *PfcpServer) handleSessionModificationRequest(
