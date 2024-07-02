@@ -134,7 +134,7 @@ func (n *NWTTServer) CreateUserPlaneNodeCapability() error {
 }
 
 func (n *NWTTServer) ReportTSCmanagemantInformation() error {
-	var tmirs []report.TMIReport
+	// var tmirs []report.TMIReport
 	umic, err := n.EncodeUserPlaneNodeManagementCapability()
 	if err != nil {
 		n.log.Errorln("EncodeUserPlaneNodeManagementCapability", err)
