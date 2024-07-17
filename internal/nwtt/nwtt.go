@@ -3,8 +3,11 @@ package nwtt
 import (
 	"context"
 	"fmt"
+	"math/rand"
+	"net"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/free5gc/go-upf/internal/forwarder"
 	"github.com/free5gc/go-upf/internal/logger"
@@ -13,17 +16,18 @@ import (
 	logger_util "github.com/free5gc/util/logger"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
+	"github.com/wmnsk/go-pfcp/ie"
 )
 
 type NWTTServer struct {
-	cfg *factory.Config //undone
-	// BridgeMacAddress net.HardwareAddr
+	cfg             *factory.Config
+	BridgeAddr      net.HardwareAddr
 	NumOfNWTTPorts  uint32
 	NumOfDSTTPorts  uint32
 	ListOfNWTTPorts []uint32
 	ListOfDSTTPorts []uint32
 	/* NW-TT -> DS-TT */
-	// PortPair map[uint32]uint32
+	PortPair map[uint32]uint32
 	/* Traffic class -> IngressPort -> EgressPort -> txBridgeDelaly*/
 	// BD5GS map[uint8]map[uint32]map[uint32]*BridgeDelay5GS
 	/* EgressPort -> DelayValue*/
@@ -53,6 +57,11 @@ func ParsePorts(cfg string) ([]uint32, error) {
 	return res, nil
 }
 func NewNWTTServer(cfg *factory.Config, driver forwarder.Driver) (*NWTTServer, error) {
+	upNodeID, err := net.ParseMAC(cfg.NWTT.UpNodeID)
+	if err != nil {
+		fmt.Printf("MacAddress is not valid and NWTT Server crushed with %s\n", err)
+		return nil, errors.Errorf("Parse UPF MacAddress error")
+	}
 	nwttports, err := ParsePorts(cfg.NWTT.NwttPorts)
 	if err != nil {
 		fmt.Printf("Nwttports is not valid and NWTT Server crushed with %s\n", err)
@@ -64,13 +73,13 @@ func NewNWTTServer(cfg *factory.Config, driver forwarder.Driver) (*NWTTServer, e
 		return nil, errors.Errorf("Parse UPF Dsttports error")
 	}
 	return &NWTTServer{
-		cfg: cfg,
-		// BridgeMacAddress:       MacAddress,
+		cfg:             cfg,
+		BridgeAddr:      upNodeID,
 		NumOfNWTTPorts:  uint32(len(nwttports)),
 		NumOfDSTTPorts:  uint32(len(dsttports)),
 		ListOfNWTTPorts: nwttports,
 		ListOfDSTTPorts: dsttports,
-		// PortPair:               make(map[uint32]uint32),
+		PortPair:        make(map[uint32]uint32),
 		// BD5GS:                  make(map[uint8]map[uint32]map[uint32]*BridgeDelay5GS),
 		// PDelayPerEgressPort:    make(map[uint32]uint64),
 		// TrafficPriorityPerPort: make(map[uint32]map[uint8]uint8),
@@ -138,43 +147,45 @@ func (n *NWTTServer) CreateUserPlaneNodeCapability() error {
 	return nil
 }
 
+func (n *NWTTServer) NewCreateBridgeInfo() *ie.IE {
+	rand.Seed(time.Now().Unix()) // initialize global pseudo random generator
+	NwttAllocatePort := n.ListOfNWTTPorts[rand.Intn(len(n.ListOfNWTTPorts))]
+	DsttAllocatePort := n.ListOfDSTTPorts[rand.Intn(len(n.ListOfDSTTPorts))]
+	n.PortPair[NwttAllocatePort] = DsttAllocatePort
+	return ie.NewCreatedBridgeInfoForTSC(
+		ie.NewDSTTPortNumber(DsttAllocatePort),
+		ie.NewFGUserPlaneNode(n.BridgeAddr),
+	)
+}
+
 func (n *NWTTServer) ReportTSCmanagemantInformation(seid uint64) error {
-	n.log.Infoln("ReportTSCmanagemantInformation")
+	n.log.Infoln("Report TSC managemant Information")
 
 	umic, err := n.EncodeUserPlaneNodeManagementCapability()
 	if err != nil {
 		n.log.Errorln("EncodeUserPlaneNodeManagementCapability", err)
 		return err
 	}
-	if n.pfcpHandler != nil {
-		// TODO: get SEID
-		n.pfcpHandler.NotifySessReport(report.SessReport{
-			SEID: seid, // SEID(Session Endpoint Identifier)
-			Reports: []report.Report{
-				report.TMIReport{
-					PMIC: umic,
-				}},
-		})
+
+	tmiReport := report.TMIReport{
+		UMIC: umic,
 	}
-	// TODO: different pmic map to different port
+
 	for _, i := range n.ListOfNWTTPorts {
 		pmic, err := n.EncodePortManagementCapability(i)
 		if err != nil {
 			n.log.Errorln("EncodePortManagementCapability", err)
 			return err
 		}
-		if n.pfcpHandler != nil {
-			// TODO: get SEID
-			n.pfcpHandler.NotifySessReport(report.SessReport{
-				SEID: seid, // SEID(Session Endpoint Identifier)
-				Reports: []report.Report{
-					report.TMIReport{
-						PMIC:    pmic,
-						PortNum: i,
-					}},
-			})
-		}
+		tmiReport.PMIC = append(tmiReport.PMIC, pmic)
+		tmiReport.PortNum = append(tmiReport.PortNum, i)
 	}
 
+	if n.pfcpHandler != nil {
+		n.pfcpHandler.NotifySessReport(report.SessReport{
+			SEID:    seid, // SEID(Session Endpoint Identifier)
+			Reports: []report.Report{tmiReport},
+		})
+	}
 	return nil
 }
