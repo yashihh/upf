@@ -147,7 +147,7 @@ func (n *NWTTServer) CreateUserPlaneNodeCapability() error {
 	return nil
 }
 
-func (n *NWTTServer) NewCreateBridgeInfo() *ie.IE {
+func (n *NWTTServer) NewCreatedBridgeInfo() *ie.IE {
 	rand.Seed(time.Now().Unix()) // initialize global pseudo random generator
 	NwttAllocatePort := n.ListOfNWTTPorts[rand.Intn(len(n.ListOfNWTTPorts))]
 	DsttAllocatePort := n.ListOfDSTTPorts[rand.Intn(len(n.ListOfDSTTPorts))]
