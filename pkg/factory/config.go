@@ -57,6 +57,7 @@ type Logger struct {
 	ReportCaller bool   `yaml:"reportCaller" valid:"optional"`
 }
 type NWTT struct {
+	UpNodeID  string `yaml:"upNodeID" 		 valid:"required"`
 	NwttPorts string `yaml:"nwttports"       valid:"required"`
 	DsttPorts string `yaml:"dsttports"       valid:"required"`
 }

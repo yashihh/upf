@@ -14,8 +14,6 @@ github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSs
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/evanphx/json-patch v0.5.2/go.mod h1:ZWS5hhDbVDyob71nXKNL0+PWn6ToqBHMikGIFbs31qQ=
-github.com/free5gc/go-gtp5gnl v1.4.5 h1:w4mHuEue4hwpnQdYc19C5sXmxvYLZ0s2vJyDNdmt2wk=
-github.com/free5gc/go-gtp5gnl v1.4.5/go.mod h1:TT5aXB90NuSPMehuIK9lV2yJFnq6Qjw37ZqNB1QAKh0=
 github.com/free5gc/util v1.0.5-0.20230511064842-2e120956883b h1:XMw3j+4AEXLeL/uyiZ7/qYE1X7Ul05RTwWBhzxCLi+0=
 github.com/free5gc/util v1.0.5-0.20230511064842-2e120956883b/go.mod h1:l2Jrml4vojDomW5jdDJhIS60KdbrE9uPYhyAq/7OnF4=
 github.com/gin-contrib/sse v0.1.0 h1:Y/yl/+YNO8GZSjAhjMsSuLt29uWRFHdHYUb5lYOV9qE=
@@ -117,8 +115,6 @@ github.com/ugorji/go/codec v1.2.9 h1:rmenucSohSTiyL09Y+l2OCk+FrMxGMzho2+tjr5ticU
 github.com/ugorji/go/codec v1.2.9/go.mod h1:UNopzCgEMSXjBc6AOMqYvWC1ktqTAfzJZUZgYf6w6lg=
 github.com/urfave/cli v1.22.5 h1:lNq9sAHXK2qfdI8W+GRItjCEkI+2oR4d+MEHy1CKXoU=
 github.com/urfave/cli v1.22.5/go.mod h1:Gos4lmkARVdJ6EkW0WaNv/tZAAMe9V7XWyB60NtXRu0=
-github.com/wmnsk/go-pfcp v0.0.17-0.20221027122420-36112307f93a h1:skrc17l2Yv6poWnvr800TsWFrnsi0pJ+3RnmlhZvyPw=
-github.com/wmnsk/go-pfcp v0.0.17-0.20221027122420-36112307f93a/go.mod h1:GdZzvBajb3sNUP8ohAhXcVgzuckLPe/fVBJlzJSIqXs=
 github.com/xdg-go/pbkdf2 v1.0.0/go.mod h1:jrpuAogTd400dnrH08LKmI/xc1MbPOebTwRqcT5RDeI=
 github.com/xdg-go/scram v1.0.2/go.mod h1:1WAq6h33pAW+iRreB34OORO2Nf7qel3VV3fjBj+hCSs=
 github.com/xdg-go/stringprep v1.0.2/go.mod h1:8F9zXuvzgwmyT5DUm4GUfZGDdT3W+LCvS6+da4O5kxM=

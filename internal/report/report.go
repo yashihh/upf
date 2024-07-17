@@ -31,9 +31,9 @@ type Report interface {
 }
 
 type TMIReport struct {
-	PMIC    []byte
 	UMIC    []byte
-	PortNum uint32
+	PMIC    [][]byte
+	PortNum []uint32
 }
 
 func (r TMIReport) Type() ReportType {

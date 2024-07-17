@@ -21,4 +21,5 @@ require (
 )
 
 replace github.com/wmnsk/go-pfcp v0.0.17-0.20221027122420-36112307f93a => ../../../go-pfcp
+
 replace github.com/free5gc/go-gtp5gnl v1.4.5 => ../../../go-gtp5gnl

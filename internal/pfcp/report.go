@@ -27,7 +27,8 @@ func (s *PfcpServer) ServeReport(sr *report.SessReport) {
 	}
 
 	var usars []report.USAReport
-
+	var tmirs report.TMIReport
+	var tmirExist bool
 	for _, rpt := range sr.Reports {
 		switch r := rpt.(type) {
 		case report.DLDReport:
@@ -47,19 +48,8 @@ func (s *PfcpServer) ServeReport(sr *report.SessReport) {
 			usars = append(usars, r)
 		case report.TMIReport:
 			s.log.Debugf("ServeReport: SEID(%#x), type(%s)", sr.SEID, r.Type())
-			if len(r.PMIC)&len(r.UMIC) == 0 {
-				return
-			}
-			if r.PortNum < 0 {
-				return
-			}
-			err := s.serveTMIReport(laddr, sr.SEID, r.UMIC, r.PMIC, r.PortNum)
-
-			// tmirs = append(tmirs, r)
-			// err := s.serveTMIReport(laddr, sr.SEID, tmirs)
-			if err != nil {
-				s.log.Errorln(err)
-			}
+			tmirs = r
+			tmirExist = true
 		default:
 			s.log.Warnf("Unsupported Report: SEID(%#x), type(%d)", sr.SEID, rpt.Type())
 		}
@@ -70,6 +60,14 @@ func (s *PfcpServer) ServeReport(sr *report.SessReport) {
 		if err != nil {
 			s.log.Errorln(err)
 		}
+	}
+
+	if tmirExist {
+		err := s.serveTMIReport(laddr, sr.SEID, tmirs)
+		if err != nil {
+			s.log.Errorln(err)
+		}
+
 	}
 }
 
@@ -139,7 +137,7 @@ func (s *PfcpServer) serveUSAReport(addr net.Addr, lSeid uint64, usars []report.
 	return errors.Wrap(err, "serveUSAReport")
 }
 
-func (s *PfcpServer) serveTMIReport(addr net.Addr, lSeid uint64, umic []byte, pmic []byte, PortNum uint32) error {
+func (s *PfcpServer) serveTMIReport(addr net.Addr, lSeid uint64, tmirs report.TMIReport) error {
 	s.log.Infoln("serveTMIReport")
 
 	sess, err := s.lnode.Sess(lSeid)
@@ -147,7 +145,6 @@ func (s *PfcpServer) serveTMIReport(addr net.Addr, lSeid uint64, umic []byte, pm
 		return errors.Wrap(err, "serveTMIReport")
 	}
 
-	// one UMIC for TSC
 	req := message.NewSessionReportRequest(
 		0,
 		0,
@@ -155,28 +152,25 @@ func (s *PfcpServer) serveTMIReport(addr net.Addr, lSeid uint64, umic []byte, pm
 		0,
 		0,
 		ie.NewReportType(1, 0, 0, 0, 0),
-		ie.NewTSCManagementInformationWithinSessionReportRequest(
-			ie.NewBridgeManagementInformationContainer(string(umic)),
-			ie.NewPortManagementInformationContainer(string(pmic)),
-			ie.NewNWTTPortNumber(PortNum),
-		),
 	)
+	if len(tmirs.UMIC) > 0 {
+		req.TSCManagementInformation = append(req.TSCManagementInformation,
+			ie.NewTSCManagementInformationWithinSessionReportRequest(
+				ie.NewBridgeManagementInformationContainer(string(tmirs.UMIC)),
+			))
+	}
 
-	// appendUMIC := true
-	// for _, r := range tmirs {
-	// 	if r.UMIC != nil && appendUMIC {
-	// 		req.TSCManagementInformation = append(req.TSCManagementInformation,
-	// 			ie.NewTSCManagementInformationWithinSessionReportRequest(
-	// 				ie.NewBridgeManagementInformationContainer(string(r.UMIC)),
-	// 			))
-	// 		appendUMIC = false
-	// 	}
-	// 	req.TSCManagementInformation = append(req.TSCManagementInformation,
-	// 		ie.NewTSCManagementInformationWithinSessionReportRequest(
-	// 			ie.NewPortManagementInformationContainer(string(r.PMIC)),
-	// 			ie.NewNWTTPortNumber(r.PortNums),
-	// 		))
-	// }
+	if len(tmirs.PMIC) > 0 {
+		for idx, pmic := range tmirs.PMIC {
+			portNum := tmirs.PortNum[idx]
+			req.TSCManagementInformation = append(req.TSCManagementInformation,
+				ie.NewTSCManagementInformationWithinSessionReportRequest(
+					ie.NewPortManagementInformationContainer(string(pmic)),
+					ie.NewNWTTPortNumber(uint32(portNum)),
+				))
+		}
+	}
+
 	err = s.sendReqTo(req, addr)
 	return errors.Wrap(err, "serveTMIReport")
 }

@@ -93,7 +93,7 @@ func (u *UpfApp) Run() error {
 	u.nwtt.HandlePfcp(u.pfcpServer)
 	err = u.nwtt.Init()
 	if err != nil {
-		logger.MainLog.Errorf("UPF NWTT Run err: %v", err)
+		logger.MainLog.Errorf("UPF NWTT Init err: %v", err)
 	}
 	logger.MainLog.Infoln("NWTT started")
 

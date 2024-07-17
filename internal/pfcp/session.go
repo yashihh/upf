@@ -90,25 +90,41 @@ func (s *PfcpServer) handleSessionEstablishmentRequest(
 	}
 	// TODO: support v6
 	var v6 net.IP
+	var rsp *message.SessionEstablishmentResponse
+	if req.CreateBridgeInfoForTSC != nil && req.CreateBridgeInfoForTSC.HasBII() {
+		bridgeInfo := s.nwtt.NewCreatedBridgeInfo()
+		sess.log.Infoln("Create Session Establishment Rsponse with: ", bridgeInfo)
 
-	rsp := message.NewSessionEstablishmentResponse(
-		0,             // mp
-		0,             // fo
-		sess.RemoteID, // seid
-		req.Header.SequenceNumber,
-		0, // pri
-		newIeNodeID(s.nodeID),
-		ie.NewCause(ie.CauseRequestAccepted),
-		ie.NewFSEID(sess.LocalID, v4, v6),
-	)
+		rsp = message.NewSessionEstablishmentResponse(
+			0,             // mp
+			0,             // fo
+			sess.RemoteID, // seid
+			req.Header.SequenceNumber,
+			0, // pri
+			newIeNodeID(s.nodeID),
+			ie.NewCause(ie.CauseRequestAccepted),
+			ie.NewFSEID(sess.LocalID, v4, v6),
+			bridgeInfo,
+		)
+
+	} else {
+		rsp = message.NewSessionEstablishmentResponse(
+			0,             // mp
+			0,             // fo
+			sess.RemoteID, // seid
+			req.Header.SequenceNumber,
+			0, // pri
+			newIeNodeID(s.nodeID),
+			ie.NewCause(ie.CauseRequestAccepted),
+			ie.NewFSEID(sess.LocalID, v4, v6),
+		)
+	}
 
 	err = s.sendRspTo(rsp, addr)
 	if err != nil {
 		s.log.Errorln(err)
 		return
 	}
-
-	s.log.Infoln("ReportTSCmanagemantInformation")
 	s.nwtt.ReportTSCmanagemantInformation(fseid.SEID)
 }
 
