@@ -116,7 +116,7 @@ func (n *NWTTServer) CreatePortCapability() error {
 			PMIC_SupportedPTPInstanceTypes:     SUPPORT,
 			PMIC_SupportedTransportTypes:       SUPPORT,
 			PMIC_SupportedDelayMechanisms:      SUPPORT,
-			PMIC_PTPGrandmasterCapable:         UNSUPPORT,
+			PMIC_PTPGrandmasterCapable:         SUPPORT,
 			PMIC_gPTPGrandmasterCapable:        UNSUPPORT,
 			PMIC_SupportedPTPProfiles:          SUPPORT,
 			PMIC_NumberOfSupportedPTPInstances: UNSUPPORT,
@@ -130,15 +130,15 @@ func (n *NWTTServer) CreatePortCapability() error {
 func (n *NWTTServer) CreateUserPlaneNodeCapability() error {
 	n.UserPlaneNodeCapabilityList = map[uint16]bool{
 		/* Information for 5GS Bridge(Read only) */
-		UMIC_UserPlaneNodeAddress: UNSUPPORT,
+		UMIC_UserPlaneNodeAddress: SUPPORT,
 		UMIC_UserPlaneNodeID:      SUPPORT,
-		UMIC_NWTTPortNumbers:      UNSUPPORT,
+		UMIC_NWTTPortNumbers:      SUPPORT,
 		/* Time synchronization information(Read only) */
-		UMIC_SupportedPTPInstanceType:            UNSUPPORT,
-		UMIC_SupportedTransportTypes:             UNSUPPORT,
+		UMIC_SupportedPTPInstanceType:            SUPPORT,
+		UMIC_SupportedTransportTypes:             SUPPORT,
 		UMIC_SupportedDelayMechanisms:            SUPPORT,
-		UMIC_PTPGrandmasterCapable:               UNSUPPORT,
-		UMIC_GPTPGrandmasterCapable:              UNSUPPORT,
+		UMIC_PTPGrandmasterCapable:               SUPPORT,
+		UMIC_gPTPGrandmasterCapable:              UNSUPPORT,
 		UMIC_SupportedPTPProfiles:                SUPPORT,
 		UMIC_NumberOfSupportedPTPInstances:       UNSUPPORT,
 		UMIC_DSTTPortTimeSynchronizationInfoList: UNSUPPORT,
