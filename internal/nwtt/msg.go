@@ -7,6 +7,36 @@ const (
 	UNSUPPORT bool = false
 )
 
+// Ethernet port management service message type definitions.
+const (
+	ManagePortCommand            uint8 = 0b00000001
+	ManagePortComplete           uint8 = 0b00000010
+	PortManagementNotify         uint8 = 0b00000011
+	PortManagementNotifyAck      uint8 = 0b00000100
+	PortManagementNotifyComplete uint8 = 0b00000101
+	PortManagementCapability     uint8 = 0b00000110
+)
+
+// IEI of MANAGE PORT COMPLETE message content
+const (
+	PortManagementCapabilityIEI uint8 = 70
+	PortStatusIEI               uint8 = 71
+	PortUpdateResultIEI         uint8 = 72
+)
+
+// Operation code
+const (
+	GetCapabilities                  uint8 = 0b00000001
+	ReadParameter                    uint8 = 0b00000010
+	SetParameter                     uint8 = 0b00000011
+	SubscribeNotifyForParameter      uint8 = 0b00000100
+	UnsubscribeForParameter          uint8 = 0b00000101
+	SelevtiveReadParameter           uint8 = 0b00000110
+	SelevtiveSubscribeForParameter   uint8 = 0b00000111
+	SelevtiveUnsubscribeForParameter uint8 = 0b00001000
+	DeleteParameterEntry             uint8 = 0b00001001
+)
+
 // PMIC
 const (
 	TSNTimeDomainNumber uint16 = 0x00D4

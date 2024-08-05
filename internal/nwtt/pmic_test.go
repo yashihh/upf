@@ -92,14 +92,14 @@ func TestPMIC(t *testing.T) {
 		}
 	})
 
-	// t.Run("Process Manage Ethernet Port Command", func(t *testing.T) {
-	// 	truth := []byte{70, 0, 8, 0, 1, 0, 2, 0, 8, 0, 9, 71, 0, 24, 2, 0, 1, 0, 8, 0, 0, 0, 0, 0x4e, 0x20, 0, 0, 0, 2, 0, 7, 0, 5, 2, 0, 0x0F, 1, 0xF0}
-	// 	tmp, err := n.ProcessManageEthernetPortCommand([]byte{0, 0, 7, 1, 2, 0, 1, 2, 0, 2}, 2)
-	// 	if err != nil {
-	// 		t.Errorf("ProcessManageEthernetPortCommand failed; got %v\n", err)
-	// 	}
-	// 	if !bytes.Equal(truth, tmp) {
-	// 		t.Errorf("Build PortStatus wrong, want %v but got %v", truth, tmp)
-	// 	}
-	// })
+	t.Run("Handle Manage Port Command GetCapabilities and ReadParameter ", func(t *testing.T) {
+		truth := []byte{70, 0, 10, 0, 0xE2, 0, 0xE3, 0, 0xE4, 0, 0xE5, 0, 0xE7, 71, 0, 11, 2, 0, 227, 0, 1, 0, 0, 228, 0, 1, 1}
+		tmp, err := n.HandleManagePortCommand([]byte{0, 0, 7, 1, 2, 0, 0xE3, 2, 0, 0xE4}, 2)
+		if err != nil {
+			t.Errorf("HandleManagePortCommand failed; got %v\n", err)
+		}
+		if !bytes.Equal(truth, tmp) {
+			t.Errorf("Build PortStatus wrong, want %v but got %v", truth, tmp)
+		}
+	})
 }
