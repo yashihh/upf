@@ -1,7 +1,5 @@
 package nwtt
 
-import "time"
-
 const (
 	SUPPORT   bool = true
 	UNSUPPORT bool = false
@@ -108,11 +106,11 @@ const (
 )
 
 // Supported PTP Instance List
-type PortDS struct {
+type PortDataSet struct {
 	PortIdentity            PortIdentity
 	PortState               uint8
 	LogMinDelayReqInterval  int8
-	PeerMeanPathDelay       time.Duration
+	PeerMeanPathDelay       int64
 	LogAnnounceInterval     int8
 	AnnounceReceiptTimeout  uint8
 	LogSyncInterval         int8
@@ -122,6 +120,21 @@ type PortDS struct {
 	DelayAsymmetry          int64
 	PortEnable              bool
 }
+
+const (
+	PortDS_PortIdentity            uint16 = 0x0011
+	PortDS_PortState               uint16 = 0x0012
+	PortDS_LogMinDelayReqInterval  uint16 = 0x0013
+	PortDS_LogAnnounceInterval     uint16 = 0x0014
+	PortDS_AnnounceReceiptTimeout  uint16 = 0x0015
+	PortDS_LogSyncInterval         uint16 = 0x0016
+	PortDS_DelayMechanism          uint16 = 0x0017
+	PortDS_LogMinPdelayReqInterval uint16 = 0x0018
+	PortDS_VersionNumber           uint16 = 0x0019
+	PortDS_MinorVersionNumber      uint16 = 0x001A
+	PortDS_DelayAsymmetry          uint16 = 0x001B
+	PortDS_PortEnable              uint16 = 0x001C
+)
 
 // UMIC
 /* Information for 5GS Bridge(Read only) */

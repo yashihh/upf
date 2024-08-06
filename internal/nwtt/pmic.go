@@ -2,7 +2,12 @@ package nwtt
 
 import (
 	"encoding/binary"
+	"fmt"
+	"os/exec"
 	"sort"
+	"strconv"
+	"strings"
+	"time"
 
 	"github.com/pkg/errors"
 	"github.com/wmnsk/go-pfcp/ie"
@@ -120,45 +125,44 @@ func (n *NWTTServer) EncodePortManagementCapability(portNumber uint32) ([]byte, 
 	return portCapability, nil
 }
 
-func (n *NWTTServer) EncodePortStatus(portNumber uint32, parameter uint16, value ...byte) ([]byte, error) {
-	/* TODO: Get status from AF-request */
+func (n *NWTTServer) EncodePortStatus(portNumber uint32, parameter uint16) ([]byte, error) {
+	/* TODO: move default value to config */
 	n.log.Infof("Build PortStatus = [0x%x]", parameter)
 
 	portStatus := []byte{}
 	parameterName := make([]byte, 2)
 	length := make([]byte, 2)
-	buffer := value
-
+	buffer := []byte{}
 	binary.BigEndian.PutUint16(parameterName, parameter)
 
 	switch parameter {
 	case PMIC_SupportedPTPInstanceTypes:
-		if len(value) == 0 { // default
-			buffer = append(buffer, BoundaryClock)
-			buffer = append(buffer, E2ETransparentClock)
-		}
+		buffer = append(buffer, BoundaryClock)
+		buffer = append(buffer, E2ETransparentClock)
+
 	case PMIC_SupportedTransportTypes: // only support ipv4 currently
-		if len(value) == 0 { // default
-			buffer = append(buffer, IPv4)
-		}
+		buffer = append(buffer, IPv4)
+
 	case PMIC_SupportedDelayMechanisms: // only support E2E currently
-		if len(value) == 0 { // default
-			buffer = append(buffer, E2E)
-		}
+		buffer = append(buffer, E2E)
+
 	case PMIC_PTPGrandmasterCapable:
-		if len(value) == 0 { // default
-			buffer = append(buffer, TRUE)
-		}
+		buffer = append(buffer, TRUE)
+
 	case PMIC_gPTPGrandmasterCapable:
-		if len(value) == 0 { // default
-			buffer = append(buffer, FALSE)
-		}
+		buffer = append(buffer, FALSE)
+
 	case PMIC_SupportedPTPProfiles:
-		if len(value) == 0 { // default
-			buffer = append(buffer, E2EDefault)
-		}
-	case PMIC_NumberOfSupportedPTPInstances:
-	case PMIC_PTPInstanceList:
+		buffer = append(buffer, E2EDefault)
+
+	case PMIC_NumberOfSupportedPTPInstances: // currently support only one instance
+		value := make([]byte, 2)
+		binary.BigEndian.PutUint16(value, 1)
+		buffer = append(buffer, value...)
+
+	case PMIC_PTPInstanceList: // currently support only one instance
+		ptpInstance := getCurrentPortDataSet()
+
 	default:
 		return nil, errors.Errorf("Reading unknown parameter:[%v]", parameter)
 	}
@@ -175,4 +179,124 @@ func (n *NWTTServer) EncodePortStatus(portNumber uint32, parameter uint16, value
 	portStatus = append(portStatus, buffer...)
 
 	return portStatus, nil
+}
+
+// func (n *NWTTServer) EncodePortUpdateResult(portNumber uint32, parameter uint16) ([]byte, error) {
+// 	portUpdateResult := []byte{}
+// 	parameterName := make([]byte, 2)
+// 	length := make([]byte, 2)
+// 	return portUpdateResult, nil
+// }
+
+// TODO: make ptp instance IE
+func getCurrentPortDataSet() PortDataSet {
+	cmd := exec.Command("sudo", "pmc", "-u", "-b", "0", "GET PORT_DATA_SET")
+	output, err := cmd.Output()
+	if err != nil {
+		fmt.Println("exec ptp4l fail. [%s]", err)
+	}
+
+	fmt.Println("CURRENT_DATA_SET:")
+	fmt.Println(string(output))
+
+	length := make([]byte, 2)
+	// ptpInstanceID :=
+	var portDS PortDataSet
+
+	lines := strings.Split(string(output), "\n")
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		switch {
+		case strings.HasPrefix(line, "portIdentity"):
+			portIdentity := parsePortIdentity(line)
+			portDS.PortIdentity = portIdentity
+
+		case strings.HasPrefix(line, "portState"):
+			portState := parsePortState(line)
+			portDS.PortState = portState
+
+		case strings.HasPrefix(line, "logMinDelayReqInterval"):
+			fmt.Sscanf(line, "logMinDelayReqInterval %d", &portDS.LogMinDelayReqInterval)
+
+		case strings.HasPrefix(line, "peerMeanPathDelay"):
+			fmt.Sscanf(line, "peerMeanPathDelay %d", &portDS.PeerMeanPathDelay)
+
+		case strings.HasPrefix(line, "logAnnounceInterval"):
+			fmt.Sscanf(line, "logAnnounceInterval %d", &portDS.LogAnnounceInterval)
+
+		case strings.HasPrefix(line, "announceReceiptTimeout"):
+			fmt.Sscanf(line, "announceReceiptTimeout %d", &portDS.AnnounceReceiptTimeout)
+
+		case strings.HasPrefix(line, "logSyncInterval"):
+			fmt.Sscanf(line, "logSyncInterval %d", &portDS.LogSyncInterval)
+
+		case strings.HasPrefix(line, "delayMechanism"):
+			fmt.Sscanf(line, "delayMechanism %d", &portDS.DelayMechanism)
+
+		case strings.HasPrefix(line, "logMinPdelayReqInterval"):
+			fmt.Sscanf(line, "logMinPdelayReqInterval %d", &portDS.LogMinPdelayReqInterval)
+
+		case strings.HasPrefix(line, "versionNumber"):
+			fmt.Sscanf(line, "versionNumber %d", &portDS.VersionNumber)
+
+		case strings.HasPrefix(line, "delayAsymmetry"):
+
+		case strings.HasPrefix(line, "portEnable"):
+
+		}
+	}
+	return portDS
+}
+
+func parsePortIdentity(line string) PortIdentity {
+	var portIdentity PortIdentity
+	var clockIdentityStr string
+	var portNumberStr string
+
+	fmt.Sscanf(line, "portIdentity %s-%s", &clockIdentityStr, &portNumberStr)
+
+	for i := 0; i < 8; i++ {
+		byteStr := clockIdentityStr[i*2 : i*2+2]
+		byteVal, _ := strconv.ParseUint(byteStr, 16, 8)
+		portIdentity.ClockIdentity[i] = uint8(byteVal)
+	}
+
+	portNumber, _ := strconv.ParseUint(portNumberStr, 10, 16)
+	portIdentity.PortNumber = uint16(portNumber)
+
+	return portIdentity
+}
+
+func parsePortState(line string) uint8 {
+	var portStateStr string
+	fmt.Sscanf(line, "portState %s", &portStateStr)
+
+	switch portStateStr {
+	case "INITIALIZING":
+		return INITIALIZING
+	case "FAULTY":
+		return FAULTY
+	case "DISABLED":
+		return DISABLED
+	case "LISTENING":
+		return LISTENING
+	case "PRE_MASTER":
+		return PRE_MASTER
+	case "MASTER":
+		return MASTER
+	case "PASSIVE":
+		return PASSIVE
+	case "UNCALIBRATED":
+		return UNCALIBRATED
+	case "SLAVE":
+		return SLAVE
+	default:
+		return 0
+	}
+}
+
+func parsePeerMeanPathDelay(line string) time.Duration {
+	var peerMeanPathDelay int64
+	fmt.Sscanf(line, "peerMeanPathDelay %d", &peerMeanPathDelay)
+	return time.Duration(peerMeanPathDelay) * time.Nanosecond
 }
