@@ -15,11 +15,26 @@ const (
 	PortManagementCapability     uint8 = 0b00000110
 )
 
+// User Plane Node management service message type definitions.
+const (
+	ManageUserPlaneNodeCommand       uint8 = 0b00000001
+	ManageUserPlaneNodeComplete      uint8 = 0b00000010
+	UserPlaneNodeManagementNotify    uint8 = 0b00000011
+	UserPlaneNodeManagementNotifyAck uint8 = 0b00000100
+)
+
 // IEI of MANAGE PORT COMPLETE message content
 const (
 	PortManagementCapabilityIEI uint8 = 70
 	PortStatusIEI               uint8 = 71
 	PortUpdateResultIEI         uint8 = 72
+)
+
+// IEI of MANAGE User Plane Node COMPLETE message content
+const (
+	UserPlaneNodeManagementCapability uint8 = 70
+	UserPlaneNodeStatus               uint8 = 71
+	UserPlaneNodeUpdateResult         uint8 = 72
 )
 
 // Operation code
@@ -38,16 +53,6 @@ const (
 // PMIC
 const (
 	TSNTimeDomainNumber uint16 = 0x00D4
-)
-const (
-	PMIC_SupportedPTPInstanceTypes     uint16 = 0x00E2
-	PMIC_SupportedTransportTypes       uint16 = 0x00E3
-	PMIC_SupportedDelayMechanisms      uint16 = 0x00E4
-	PMIC_PTPGrandmasterCapable         uint16 = 0x00E5
-	PMIC_gPTPGrandmasterCapable        uint16 = 0x00E6
-	PMIC_SupportedPTPProfiles          uint16 = 0x00E7
-	PMIC_NumberOfSupportedPTPInstances uint16 = 0x00E8
-	PMIC_PTPInstanceList               uint16 = 0x00E9
 )
 
 // Supported PTP Instance Types
@@ -110,7 +115,6 @@ type PortDataSet struct {
 	PortIdentity            PortIdentity
 	PortState               uint8
 	LogMinDelayReqInterval  int8
-	PeerMeanPathDelay       int64
 	LogAnnounceInterval     int8
 	AnnounceReceiptTimeout  uint8
 	LogSyncInterval         int8
@@ -139,20 +143,20 @@ const (
 // UMIC
 /* Information for 5GS Bridge(Read only) */
 const (
-	UMIC_UserPlaneNodeAddress uint16 = 0x0001
-	UMIC_UserPlaneNodeID      uint16 = 0x0003
-	UMIC_NWTTPortNumbers      uint16 = 0x0004
+	UserPlaneNodeAddress uint16 = 0x0001
+	UserPlaneNodeID      uint16 = 0x0003
+	NWTTPortNumbers      uint16 = 0x0004
 )
 
 /* Time synchronization information(Read only) */
 const (
-	UMIC_SupportedPTPInstanceType            uint16 = 0x0074
-	UMIC_SupportedTransportTypes             uint16 = 0x0075
-	UMIC_SupportedDelayMechanisms            uint16 = 0x0076
-	UMIC_PTPGrandmasterCapable               uint16 = 0x0077
-	UMIC_gPTPGrandmasterCapable              uint16 = 0x0078
-	UMIC_SupportedPTPProfiles                uint16 = 0x0079
-	UMIC_NumberOfSupportedPTPInstances       uint16 = 0x007A
-	UMIC_DSTTPortTimeSynchronizationInfoList uint16 = 0x007B
-	UMIC_PTPInstanceSpecification            uint16 = 0x007C
+	SupportedPTPInstanceTypes           uint16 = 0x0074
+	SupportedTransportTypes             uint16 = 0x0075
+	SupportedDelayMechanisms            uint16 = 0x0076
+	PTPGrandmasterCapable               uint16 = 0x0077
+	gPTPGrandmasterCapable              uint16 = 0x0078
+	SupportedPTPProfiles                uint16 = 0x0079
+	NumberOfSupportedPTPInstances       uint16 = 0x007A
+	DSTTPortTimeSynchronizationInfoList uint16 = 0x007B
+	PTPInstanceSpecification            uint16 = 0x007C
 )
