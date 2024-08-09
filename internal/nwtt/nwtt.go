@@ -113,14 +113,18 @@ func (n *NWTTServer) Init() error {
 func (n *NWTTServer) CreatePortCapability() error {
 	for _, i := range n.ListOfNWTTPorts {
 		n.PortCapabilityList[i] = map[uint16]bool{
-			PMIC_SupportedPTPInstanceTypes:     SUPPORT,
-			PMIC_SupportedTransportTypes:       SUPPORT,
-			PMIC_SupportedDelayMechanisms:      SUPPORT,
-			PMIC_PTPGrandmasterCapable:         SUPPORT,
-			PMIC_gPTPGrandmasterCapable:        UNSUPPORT,
-			PMIC_SupportedPTPProfiles:          SUPPORT,
-			PMIC_NumberOfSupportedPTPInstances: UNSUPPORT,
-			PMIC_PTPInstanceList:               UNSUPPORT,
+			PortDS_PortIdentity:            SUPPORT,
+			PortDS_PortState:               SUPPORT,
+			PortDS_LogMinDelayReqInterval:  SUPPORT,
+			PortDS_LogAnnounceInterval:     SUPPORT,
+			PortDS_AnnounceReceiptTimeout:  SUPPORT,
+			PortDS_LogSyncInterval:         SUPPORT,
+			PortDS_DelayMechanism:          SUPPORT,
+			PortDS_LogMinPdelayReqInterval: SUPPORT,
+			PortDS_VersionNumber:           SUPPORT,
+			PortDS_MinorVersionNumber:      SUPPORT,
+			PortDS_DelayAsymmetry:          SUPPORT,
+			PortDS_PortEnable:              SUPPORT,
 		}
 	}
 	return nil
@@ -130,19 +134,19 @@ func (n *NWTTServer) CreatePortCapability() error {
 func (n *NWTTServer) CreateUserPlaneNodeCapability() error {
 	n.UserPlaneNodeCapabilityList = map[uint16]bool{
 		/* Information for 5GS Bridge(Read only) */
-		UMIC_UserPlaneNodeAddress: SUPPORT,
-		UMIC_UserPlaneNodeID:      SUPPORT,
-		UMIC_NWTTPortNumbers:      SUPPORT,
+		UserPlaneNodeAddress: SUPPORT,
+		UserPlaneNodeID:      SUPPORT,
+		NWTTPortNumbers:      SUPPORT,
 		/* Time synchronization information(Read only) */
-		UMIC_SupportedPTPInstanceType:            SUPPORT,
-		UMIC_SupportedTransportTypes:             SUPPORT,
-		UMIC_SupportedDelayMechanisms:            SUPPORT,
-		UMIC_PTPGrandmasterCapable:               SUPPORT,
-		UMIC_gPTPGrandmasterCapable:              UNSUPPORT,
-		UMIC_SupportedPTPProfiles:                SUPPORT,
-		UMIC_NumberOfSupportedPTPInstances:       UNSUPPORT,
-		UMIC_DSTTPortTimeSynchronizationInfoList: UNSUPPORT,
-		UMIC_PTPInstanceSpecification:            UNSUPPORT,
+		SupportedPTPInstanceTypes:           UNSUPPORT,
+		SupportedTransportTypes:             UNSUPPORT,
+		SupportedDelayMechanisms:            UNSUPPORT,
+		PTPGrandmasterCapable:               UNSUPPORT,
+		gPTPGrandmasterCapable:              UNSUPPORT,
+		SupportedPTPProfiles:                UNSUPPORT,
+		NumberOfSupportedPTPInstances:       UNSUPPORT,
+		DSTTPortTimeSynchronizationInfoList: UNSUPPORT,
+		PTPInstanceSpecification:            UNSUPPORT,
 	}
 	return nil
 }
