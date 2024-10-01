@@ -28,7 +28,7 @@ func TestUMIC(t *testing.T) {
 		}
 	})
 	t.Run("Encode User Plane Node Management Capability", func(t *testing.T) {
-		truth := []byte{0, 0x01, 0, 0x03, 0, 0x04}
+		truth := []byte{0, 0x01, 0, 0x03, 0, 116, 0, 117, 0, 118, 0, 119, 0, 120, 0, 121, 0, 122}
 		tmp, err := n.EncodeUserPlaneNodeManagementCapability()
 		if err != nil {
 			t.Errorf("Encode User Plane Node Management Capability failed; got %v\n", err)
@@ -48,7 +48,7 @@ func TestUMIC(t *testing.T) {
 		}
 	})
 
-	t.Run("Encode EncodeUserPlaneNode Status with Supported transport types", func(t *testing.T) {
+	t.Run("Encode UserPlaneNode Status with Supported transport types", func(t *testing.T) {
 		truth := []byte{0, 0x75, 0, 1, IPv4}
 		tmp, err := n.EncodeUserPlaneNodeStatus(SupportedTransportTypes)
 		if err != nil {
@@ -59,7 +59,7 @@ func TestUMIC(t *testing.T) {
 		}
 	})
 
-	t.Run("Encode EncodeUserPlaneNode Status with Supported Delay Mechanisms", func(t *testing.T) {
+	t.Run("Encode UserPlaneNode Status with Supported Delay Mechanisms", func(t *testing.T) {
 		truth := []byte{0, 0x76, 0, 1, E2E}
 		tmp, err := n.EncodeUserPlaneNodeStatus(SupportedDelayMechanisms)
 		if err != nil {
@@ -70,7 +70,7 @@ func TestUMIC(t *testing.T) {
 		}
 	})
 
-	t.Run("Encode Port Status with PTP Grandmaster Capable", func(t *testing.T) {
+	t.Run("Encode UserPlaneNode Status with PTP Grandmaster Capable", func(t *testing.T) {
 		truth := []byte{0, 0x77, 0, 1, TRUE}
 		tmp, err := n.EncodeUserPlaneNodeStatus(PTPGrandmasterCapable)
 		if err != nil {
@@ -81,7 +81,7 @@ func TestUMIC(t *testing.T) {
 		}
 	})
 
-	t.Run("Encode Port Status with Supported PTP Profiles", func(t *testing.T) {
+	t.Run("Encode UserPlaneNode Status with Supported PTP Profiles", func(t *testing.T) {
 		truth := []byte{0, 0x79, 0, 1, E2EDefault}
 		tmp, err := n.EncodeUserPlaneNodeStatus(SupportedPTPProfiles)
 		if err != nil {
@@ -102,4 +102,15 @@ func TestUMIC(t *testing.T) {
 	// 		t.Errorf("Build PortStatus wrong, want %v but got %v", truth, tmp)
 	// 	}
 	// })
+
+	t.Run("Handle Manage UserPlaneNode Command SetParameter ", func(t *testing.T) {
+		truth := []byte{72, 0, 14, 1, 0, 124, 0, 9, 0, 5, 48, 57, 0, 2, 0, 1, 0}
+		tmp, err := n.HandleManageUserPlaneNodeCommand([]byte{01, 00, 0x0e, 03, 00, 0x7c, 00, 0x09, 00, 05, 0x30, 0x39, 00, 02, 00, 01, 00})
+		if err != nil {
+			t.Errorf("HandleManagePortCommand failed; got %v\n", err)
+		}
+		if !bytes.Equal(truth, tmp) {
+			t.Errorf("Build PortStatus wrong, want %v but got %v", truth, tmp)
+		}
+	})
 }

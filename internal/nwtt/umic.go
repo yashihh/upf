@@ -32,7 +32,11 @@ func (n *NWTTServer) EncodeUserPlaneNodeManagementCapability() ([]byte, error) {
 func (n *NWTTServer) HandleManageUserPlaneNodeCommand(managementList []byte) ([]byte, error) {
 	buffer := []byte{}
 	StatusContents := []byte{}
+	UpdatedStatusContents := []byte{}
+
 	var readNum uint8 = 0
+	var setNum uint8 = 0
+
 	iEI := uint8(managementList[0])
 	length := binary.BigEndian.Uint16(managementList[1:3])
 	if int(length) != len(managementList[3:]) {
@@ -70,8 +74,44 @@ func (n *NWTTServer) HandleManageUserPlaneNodeCommand(managementList []byte) ([]
 			idx += 3
 		case SetParameter:
 			n.log.Infof("Handle UserPlaneNode SetParameter Operation")
+			capability := binary.BigEndian.Uint16(managementList[idx+1 : idx+3])
+			switch capability {
+			case PTPInstanceSpecification:
+				UpdatedStatusContents = append(UpdatedStatusContents, byte(PTPInstanceSpecification>>8), byte(PTPInstanceSpecification&0xFF))
+				// TODO : support more than one PTP intance
+				listLength := binary.BigEndian.Uint16(managementList[idx+3 : idx+5])
+				for ptpI := 0; ptpI < int(listLength); {
+					ptpInstance := managementList[idx+5:]
+					ptpILength := binary.BigEndian.Uint16(ptpInstance[0:2])
+					// ptpID := binary.BigEndian.Uint16(ptpInstance[2:4])
+					for i := 4; i < int(ptpILength)+4; {
+						parameter := binary.BigEndian.Uint16(ptpInstance[i : i+2])
+						valLength := binary.BigEndian.Uint16(ptpInstance[i+2 : i+4])
+
+						if parameter == PTP_profile {
+							value := ptpInstance[i+4 : i+4+int(valLength)]
+							n.log.Infof("PTP profile :[%x]", value)
+							UpdatedStatusContents = append(UpdatedStatusContents, value...)
+
+						} else if parameter == Transport_type {
+							value := ptpInstance[i+4 : i+4+int(valLength)]
+							n.log.Infof("Transport type :[%x]", value)
+							UpdatedStatusContents = append(UpdatedStatusContents, value...)
+
+						} else {
+							n.log.Infof("parameter [%d] not supported.", parameter)
+						}
+						i += 4 + int(valLength)
+					}
+					ptpI += 4 + int(ptpILength)
+					UpdatedStatusContents = append(UpdatedStatusContents, byte(listLength&0xFF))
+					UpdatedStatusContents = append(UpdatedStatusContents, ptpInstance...)
+
+				}
+				idx += int(listLength) + 5
+			}
+			setNum++
 			/* TODO：Hangle correct idx*/
-			idx += 3
 		case SubscribeNotifyForParameter:
 			n.log.Infof("Handle UserPlaneNode SubscribeNotifyForParameter Operation")
 			idx += 3
@@ -79,21 +119,35 @@ func (n *NWTTServer) HandleManageUserPlaneNodeCommand(managementList []byte) ([]
 			n.log.Infof("Handle UserPlaneNode UnsubscribeForParameter Operation")
 			idx += 3
 		default:
-			return nil, errors.Errorf("Unsupport operation code in Manage UserPlaneNode Command")
+			return nil, errors.Errorf("Unsupport operation code in Manage UserPlaneNode Command %x with -%d", managementList[idx], idx)
 		}
 
 	}
 	if readNum != 0 {
-		/* Put Number of port parameters successfully read into Status */
+		/* Put Number of UpNode parameters successfully read into Status */
 		StatusContents = append([]byte{readNum}, StatusContents...)
-		/* Put Length of port status and error contents */
+		/* Put Length of UpNode status and error contents */
 		statusLength := make([]byte, 2)
 		binary.BigEndian.PutUint16(statusLength, uint16(len(StatusContents)))
 		StatusContents = append(statusLength, StatusContents...)
-		/* Put Port status IEI  */
-		StatusContents = append([]byte{PortStatusIEI}, StatusContents...)
+		/* Put UpNode status IEI  */
+		StatusContents = append([]byte{UserPlaneNodeStatus}, StatusContents...)
 		/* Merge to buffer*/
 		buffer = append(buffer, StatusContents...)
+	}
+	if setNum != 0 {
+		/* Put Number of UpNode parameters successfully set into UpdatedStatusContents */
+		UpdatedStatusContents = append([]byte{setNum}, UpdatedStatusContents...)
+		/* Put Length of UpNode Updated status and error contents */
+		updatedstatusLength := make([]byte, 2)
+		binary.BigEndian.PutUint16(updatedstatusLength, uint16(len(UpdatedStatusContents)))
+		UpdatedStatusContents = append(updatedstatusLength, UpdatedStatusContents...)
+		/* Put UpNode Updated status IEI  */
+		UpdatedStatusContents = append([]byte{UserPlaneNodeUpdateResult}, UpdatedStatusContents...)
+
+		/* Merge to buffer*/
+		buffer = append(buffer, UpdatedStatusContents...)
+
 	}
 	return buffer, nil
 }
@@ -101,8 +155,7 @@ func (n *NWTTServer) HandleManageUserPlaneNodeCommand(managementList []byte) ([]
 func (n *NWTTServer) DecodeUserPlaneNodeManagementInformation(BMIC []byte) (*ie.IE, error) {
 	switch uint8(BMIC[0]) {
 	case ManageUserPlaneNodeCommand:
-		buffer, err := n.EncodeUserPlaneNodeManagementCapability()
-		n.log.Infof("buffer length = %v", len(buffer))
+		buffer, err := n.HandleManageUserPlaneNodeCommand(BMIC)
 		if err != nil {
 			n.log.Errorln(err)
 			return nil, err
@@ -123,7 +176,7 @@ func (n *NWTTServer) EncodeUserPlaneNodeStatus(parameter uint16) ([]byte, error)
 	/* TODO: move default value to config */
 	n.log.Infof("Build User Plane Node Status = [0x%x]", parameter)
 
-	portStatus := []byte{}
+	upNodeStatus := []byte{}
 	parameterName := make([]byte, 2)
 	length := make([]byte, 2)
 	buffer := []byte{}
@@ -161,13 +214,13 @@ func (n *NWTTServer) EncodeUserPlaneNodeStatus(parameter uint16) ([]byte, error)
 	binary.BigEndian.PutUint16(length, uint16(len(buffer)))
 
 	/* Put Name of parameter */
-	portStatus = append(portStatus, parameterName...)
+	upNodeStatus = append(upNodeStatus, parameterName...)
 
 	/* Put Length of Port parameter value */
-	portStatus = append(portStatus, length...)
+	upNodeStatus = append(upNodeStatus, length...)
 
 	/* Put Port parameter value */
-	portStatus = append(portStatus, buffer...)
+	upNodeStatus = append(upNodeStatus, buffer...)
 
-	return portStatus, nil
+	return upNodeStatus, nil
 }

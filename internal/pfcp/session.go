@@ -300,6 +300,20 @@ func (s *PfcpServer) handleSessionModificationRequest(
 			usars = append(usars, rs...)
 		}
 	}
+	var TSCManagementInformationRsp []*ie.IE
+	for _, TSCMInfoIE := range req.TSCManagementInformation {
+
+		tscIE, err := TSCMInfoIE.TSCManagementInformation()
+		if err != nil {
+			sess.log.Errorln(err)
+		}
+		rsp, err := s.nwtt.HandleTSCManagementInformation(tscIE)
+		if err != nil {
+			sess.log.Errorln(err)
+		}
+		TSCManagementInformationRsp = append(TSCManagementInformationRsp, rsp)
+
+	}
 
 	rsp := message.NewSessionModificationResponse(
 		0,             // mp
@@ -325,6 +339,9 @@ func (s *PfcpServer) handleSessionModificationRequest(
 		if urrInfo.removed {
 			delete(sess.URRIDs, r.URRID)
 		}
+	}
+	if req.TSCManagementInformation != nil {
+		rsp.TSCManagementInformation = append(rsp.TSCManagementInformation, TSCManagementInformationRsp...)
 	}
 
 	err = s.sendRspTo(rsp, addr)
