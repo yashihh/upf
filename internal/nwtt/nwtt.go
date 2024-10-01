@@ -2,6 +2,7 @@ package nwtt
 
 import (
 	"context"
+	"encoding/binary"
 	"fmt"
 	"math/rand"
 	"net"
@@ -22,6 +23,7 @@ import (
 type NWTTServer struct {
 	cfg             *factory.Config
 	BridgeAddr      net.HardwareAddr
+	PTPInstanceID   uint16
 	NumOfNWTTPorts  uint32
 	NumOfDSTTPorts  uint32
 	ListOfNWTTPorts []uint32
@@ -73,8 +75,10 @@ func NewNWTTServer(cfg *factory.Config, driver forwarder.Driver) (*NWTTServer, e
 		return nil, errors.Errorf("Parse UPF Dsttports error")
 	}
 	return &NWTTServer{
-		cfg:             cfg,
-		BridgeAddr:      upNodeID,
+		cfg:        cfg,
+		BridgeAddr: upNodeID,
+		// TODO: extend for more ptp instance
+		PTPInstanceID:   0,
 		NumOfNWTTPorts:  uint32(len(nwttports)),
 		NumOfDSTTPorts:  uint32(len(dsttports)),
 		ListOfNWTTPorts: nwttports,
@@ -136,15 +140,15 @@ func (n *NWTTServer) CreateUserPlaneNodeCapability() error {
 		/* Information for 5GS Bridge(Read only) */
 		UserPlaneNodeAddress: SUPPORT,
 		UserPlaneNodeID:      SUPPORT,
-		NWTTPortNumbers:      SUPPORT,
+		NWTTPortNumbers:      UNSUPPORT,
 		/* Time synchronization information(Read only) */
-		SupportedPTPInstanceTypes:           UNSUPPORT,
-		SupportedTransportTypes:             UNSUPPORT,
-		SupportedDelayMechanisms:            UNSUPPORT,
-		PTPGrandmasterCapable:               UNSUPPORT,
-		gPTPGrandmasterCapable:              UNSUPPORT,
-		SupportedPTPProfiles:                UNSUPPORT,
-		NumberOfSupportedPTPInstances:       UNSUPPORT,
+		SupportedPTPInstanceTypes:           SUPPORT,
+		SupportedTransportTypes:             SUPPORT,
+		SupportedDelayMechanisms:            SUPPORT,
+		PTPGrandmasterCapable:               SUPPORT,
+		gPTPGrandmasterCapable:              SUPPORT,
+		SupportedPTPProfiles:                SUPPORT,
+		NumberOfSupportedPTPInstances:       SUPPORT,
 		DSTTPortTimeSynchronizationInfoList: UNSUPPORT,
 		PTPInstanceSpecification:            UNSUPPORT,
 	}
@@ -162,25 +166,39 @@ func (n *NWTTServer) NewCreatedBridgeInfo() *ie.IE {
 	)
 }
 
+//TODO: handle NWTT port init capability notify
+//TODO: handle UMIC init notify
+// add ptpinstanceID, upnode id (for pfcp node id)
+
 func (n *NWTTServer) ReportTSCmanagemantInformation(seid uint64) error {
 	n.log.Infoln("Report TSC managemant Information")
+	umic := []byte{}
+	// umic = append(umic, UserPlaneNodeManagementNotify)
+	// for parameter, _ := range n.UserPlaneNodeCapabilityList {
 
-	umic, err := n.EncodeUserPlaneNodeManagementCapability()
-	if err != nil {
-		n.log.Errorln("EncodeUserPlaneNodeManagementCapability", err)
-		return err
-	}
+	// }
+	// if err != nil {
+	// 	n.log.Errorln("EncodeUserPlaneNodeManagementCapability", err)
+	// 	return err
+	// }
 
 	tmiReport := report.TMIReport{
 		UMIC: umic,
 	}
 
 	for _, i := range n.ListOfNWTTPorts {
-		pmic, err := n.EncodePortManagementCapability(i)
+		pmic := []byte{}
+		pmic = append(pmic, PortManagementCapability)
+		length := make([]byte, 2)
+		capability, err := n.EncodePortManagementCapability(i)
 		if err != nil {
 			n.log.Errorln("EncodePortManagementCapability", err)
 			return err
 		}
+		binary.BigEndian.PutUint16(length, uint16(len(capability)))
+		pmic = append(pmic, length...)
+		pmic = append(pmic, capability...)
+
 		tmiReport.PMIC = append(tmiReport.PMIC, pmic)
 		tmiReport.PortNum = append(tmiReport.PortNum, i)
 	}
@@ -192,4 +210,58 @@ func (n *NWTTServer) ReportTSCmanagemantInformation(seid uint64) error {
 		})
 	}
 	return nil
+}
+
+func (n *NWTTServer) HandleTSCManagementInformation(TSCMInfoIEs []*ie.IE) (*ie.IE, error) {
+	n.log.Infoln("HandleTSCManagementInformation")
+	var PMIC, UMIC []byte
+	var NWTTPortNumber uint32
+	var err error
+	for _, i := range TSCMInfoIEs {
+		switch i.Type {
+		case ie.PortManagementInformationContainer:
+			PMIC = i.Payload
+			if PMIC == nil {
+				n.log.Errorln("pmic error")
+				return nil, err
+			}
+		case ie.BridgeManagementInformationContainer:
+			UMIC = i.Payload
+			if UMIC == nil {
+				n.log.Errorln("pmic error")
+				return nil, err
+			}
+		case ie.NWTTPortNumber:
+			NWTTPortNumber, err = i.NWTTPortNumber()
+			if err != nil {
+				n.log.Errorln(err)
+				return nil, err
+			}
+		default:
+			n.log.Errorln("Wrong IE type in SessionModificationResquest TSCManagementInformation")
+		}
+	}
+	var PMICRsp *ie.IE
+	var UMICRsp *ie.IE
+	var NWTTPortNumberRsp *ie.IE
+	var err2 error
+
+	if PMIC != nil && NWTTPortNumber != 0 {
+		PMICRsp, err2 = n.DecodePortManagementInformation(PMIC, NWTTPortNumber)
+		if err2 != nil {
+			n.log.Errorln(err2)
+			return nil, err2
+		}
+		NWTTPortNumberRsp = ie.NewNWTTPortNumber(NWTTPortNumber)
+	}
+	if UMIC != nil {
+		UMICRsp, err2 = n.DecodeUserPlaneNodeManagementInformation(UMIC)
+		if err2 != nil {
+			n.log.Errorln(err2)
+			return nil, err2
+		}
+	}
+
+	n.log.Infof("NWTT get PMIC:[%x] ,BMIC:[%x] ,NWTTPort:[%d]\n", PMIC, UMIC, NWTTPortNumber)
+	return ie.NewTSCManagementInformationWithinSessionModificationResponse(PMICRsp, UMICRsp, NWTTPortNumberRsp), nil
 }
