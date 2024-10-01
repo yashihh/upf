@@ -125,21 +125,6 @@ type PortDataSet struct {
 	PortEnable              bool
 }
 
-const (
-	PortDS_PortIdentity            uint16 = 0x0011
-	PortDS_PortState               uint16 = 0x0012
-	PortDS_LogMinDelayReqInterval  uint16 = 0x0013
-	PortDS_LogAnnounceInterval     uint16 = 0x0014
-	PortDS_AnnounceReceiptTimeout  uint16 = 0x0015
-	PortDS_LogSyncInterval         uint16 = 0x0016
-	PortDS_DelayMechanism          uint16 = 0x0017
-	PortDS_LogMinPdelayReqInterval uint16 = 0x0018
-	PortDS_VersionNumber           uint16 = 0x0019
-	PortDS_MinorVersionNumber      uint16 = 0x001A
-	PortDS_DelayAsymmetry          uint16 = 0x001B
-	PortDS_PortEnable              uint16 = 0x001C
-)
-
 // UMIC
 /* Information for 5GS Bridge(Read only) */
 const (
@@ -159,4 +144,36 @@ const (
 	NumberOfSupportedPTPInstances       uint16 = 0x007A
 	DSTTPortTimeSynchronizationInfoList uint16 = 0x007B
 	PTPInstanceSpecification            uint16 = 0x007C
+)
+
+// PTP instance specification
+const (
+	PTP_profile                                    uint16 = 0x0001
+	Transport_type                                 uint16 = 0x0002
+	Grandmaster_enabled                            uint16 = 0x0003
+	Grandmaster_on_behalf_of_DSTT_enabled          uint16 = 0x0004
+	Grandmaster_candidate_enabled                  uint16 = 0x0005
+	DefaultDS_clockIdentity                        uint16 = 0x0006
+	DefaultDS_clockQuality_clockClass              uint16 = 0x0007
+	DefaultDS_clockQuality_clockAccuracy           uint16 = 0x0008
+	DefaultDS_clockQuality_offsetScaledLogVariance uint16 = 0x0009
+	DefaultDS_priority1                            uint16 = 0x000A
+	DefaultDS_priority2                            uint16 = 0x000B
+	DefaultDS_domainNumber                         uint16 = 0x000C
+	DefaultDS_sdoId                                uint16 = 0x000D
+	DefaultDS_instanceEnable                       uint16 = 0x000E
+	DefaultDS_externalPortConfigurationEnabled     uint16 = 0x000F
+	DefaultDS_instanceType                         uint16 = 0x0010
+	PortDS_PortIdentity                            uint16 = 0x0011
+	PortDS_PortState                               uint16 = 0x0012
+	PortDS_LogMinDelayReqInterval                  uint16 = 0x0013
+	PortDS_LogAnnounceInterval                     uint16 = 0x0014
+	PortDS_AnnounceReceiptTimeout                  uint16 = 0x0015
+	PortDS_LogSyncInterval                         uint16 = 0x0016
+	PortDS_DelayMechanism                          uint16 = 0x0017
+	PortDS_LogMinPdelayReqInterval                 uint16 = 0x0018
+	PortDS_VersionNumber                           uint16 = 0x0019
+	PortDS_MinorVersionNumber                      uint16 = 0x001A
+	PortDS_DelayAsymmetry                          uint16 = 0x001B
+	PortDS_PortEnable                              uint16 = 0x001C
 )
