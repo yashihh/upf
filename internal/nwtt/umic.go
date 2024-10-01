@@ -83,7 +83,11 @@ func (n *NWTTServer) HandleManageUserPlaneNodeCommand(managementList []byte) ([]
 				for ptpI := 0; ptpI < int(listLength); {
 					ptpInstance := managementList[idx+5:]
 					ptpILength := binary.BigEndian.Uint16(ptpInstance[0:2])
-					// ptpID := binary.BigEndian.Uint16(ptpInstance[2:4])
+					ptpID := binary.BigEndian.Uint16(ptpInstance[2:4])
+					if n.PTPInstanceID == 0 {
+						n.PTPInstanceID = ptpID
+						n.log.Infof("Set PTP Instance ID with [%d] successfully", n.PTPInstanceID)
+					}
 					for i := 4; i < int(ptpILength)+4; {
 						parameter := binary.BigEndian.Uint16(ptpInstance[i : i+2])
 						valLength := binary.BigEndian.Uint16(ptpInstance[i+2 : i+4])
