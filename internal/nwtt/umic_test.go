@@ -28,7 +28,7 @@ func TestUMIC(t *testing.T) {
 		}
 	})
 	t.Run("Encode User Plane Node Management Capability", func(t *testing.T) {
-		truth := []byte{0, 0x01, 0, 0x03, 0, 116, 0, 117, 0, 118, 0, 119, 0, 120, 0, 121, 0, 122}
+		truth := []byte{0, 0x01, 0, 0x03, 0, 116, 0, 117, 0, 118, 0, 119, 0, 121, 0, 122, 0, 123, 0, 124}
 		tmp, err := n.EncodeUserPlaneNodeManagementCapability()
 		if err != nil {
 			t.Errorf("Encode User Plane Node Management Capability failed; got %v\n", err)
@@ -103,9 +103,33 @@ func TestUMIC(t *testing.T) {
 	// 	}
 	// })
 
-	t.Run("Handle Manage UserPlaneNode Command SetParameter ", func(t *testing.T) {
-		truth := []byte{72, 0, 14, 1, 0, 124, 0, 9, 0, 5, 48, 57, 0, 2, 0, 1, 0}
+	t.Run("Handle Manage UserPlaneNode Command SetParameter1 ", func(t *testing.T) {
+		truth := []byte{72, 0, 13, 1, 0, 124, 9, 0, 5, 48, 57, 0, 2, 0, 1, 0}
 		tmp, err := n.HandleManageUserPlaneNodeCommand([]byte{01, 00, 0x0e, 03, 00, 0x7c, 00, 0x09, 00, 05, 0x30, 0x39, 00, 02, 00, 01, 00})
+		if err != nil {
+			t.Errorf("HandleManagePortCommand failed; got %v\n", err)
+		}
+		if !bytes.Equal(truth, tmp) {
+			t.Errorf("Build PortStatus wrong, want %v but got %v", truth, tmp)
+		}
+	})
+
+	t.Run("Handle Manage UserPlaneNode Command SetParameter2 ", func(t *testing.T) {
+		truth := []byte{72, 0, 22, 1, 0, 123, 18, 0, 14, 0, 4, 0, 10, 48, 57, 0, 4, 0, 1, 1, 0, 5, 0, 1, 1}
+		tmp, err := n.HandleManageUserPlaneNodeCommand([]byte{01, 00, 0x17, 03, 00, 0x7B, 00, 0x12, 00, 0x0E, 00, 0x04, 00, 0x0A, 0x30, 0x39, 00, 0x04, 00, 0x01, 01, 00, 0x05, 00, 0x01, 01})
+		if err != nil {
+			t.Errorf("HandleManagePortCommand failed; got %v\n", err)
+		}
+		if !bytes.Equal(truth, tmp) {
+			t.Errorf("Build PortStatus wrong, want %v but got %v", truth, tmp)
+		}
+	})
+
+	t.Run("Handle Manage UserPlaneNode Command SetParameter of two parameter ", func(t *testing.T) {
+		truth := []byte{72, 0, 34, 2, 0, 124, 9, 0, 5, 48, 57, 0, 2, 0, 1, 0,
+			0, 123, 18, 0, 14, 0, 4, 0, 10, 48, 57, 0, 4, 0, 1, 1, 0, 5, 0, 1, 1}
+		tmp, err := n.HandleManageUserPlaneNodeCommand([]byte{01, 00, 0x25, 03, 00, 0x7c, 00, 0x09, 00, 0x05, 0x30, 0x39, 00, 02, 00, 01, 00,
+			03, 00, 0x7B, 00, 0x12, 00, 0x0E, 00, 0x04, 00, 0x0A, 0x30, 0x39, 00, 0x04, 00, 0x01, 01, 00, 0x05, 00, 0x01, 01})
 		if err != nil {
 			t.Errorf("HandleManagePortCommand failed; got %v\n", err)
 		}

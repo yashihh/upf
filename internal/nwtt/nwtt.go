@@ -146,11 +146,11 @@ func (n *NWTTServer) CreateUserPlaneNodeCapability() error {
 		SupportedTransportTypes:             SUPPORT,
 		SupportedDelayMechanisms:            SUPPORT,
 		PTPGrandmasterCapable:               SUPPORT,
-		gPTPGrandmasterCapable:              SUPPORT,
+		gPTPGrandmasterCapable:              UNSUPPORT,
 		SupportedPTPProfiles:                SUPPORT,
 		NumberOfSupportedPTPInstances:       SUPPORT,
-		DSTTPortTimeSynchronizationInfoList: UNSUPPORT,
-		PTPInstanceSpecification:            UNSUPPORT,
+		DSTTPortTimeSynchronizationInfoList: SUPPORT,
+		PTPInstanceSpecification:            SUPPORT,
 	}
 	return nil
 }

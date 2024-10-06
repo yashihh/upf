@@ -81,7 +81,7 @@ func (n *NWTTServer) HandleManageUserPlaneNodeCommand(managementList []byte) ([]
 				// TODO : support more than one PTP intance
 				listLength := binary.BigEndian.Uint16(managementList[idx+3 : idx+5])
 				for ptpI := 0; ptpI < int(listLength); {
-					ptpInstance := managementList[idx+5:]
+					ptpInstance := managementList[idx+5 : idx+5+int(listLength)]
 					ptpILength := binary.BigEndian.Uint16(ptpInstance[0:2])
 					ptpID := binary.BigEndian.Uint16(ptpInstance[2:4])
 					if n.PTPInstanceID == 0 {
@@ -95,12 +95,10 @@ func (n *NWTTServer) HandleManageUserPlaneNodeCommand(managementList []byte) ([]
 						if parameter == PTP_profile {
 							value := ptpInstance[i+4 : i+4+int(valLength)]
 							n.log.Infof("PTP profile :[%x]", value)
-							UpdatedStatusContents = append(UpdatedStatusContents, value...)
 
 						} else if parameter == Transport_type {
 							value := ptpInstance[i+4 : i+4+int(valLength)]
 							n.log.Infof("Transport type :[%x]", value)
-							UpdatedStatusContents = append(UpdatedStatusContents, value...)
 
 						} else {
 							n.log.Infof("parameter [%d] not supported.", parameter)
@@ -108,14 +106,54 @@ func (n *NWTTServer) HandleManageUserPlaneNodeCommand(managementList []byte) ([]
 						i += 4 + int(valLength)
 					}
 					ptpI += 4 + int(ptpILength)
+					// User plane node parameter update
 					UpdatedStatusContents = append(UpdatedStatusContents, byte(listLength&0xFF))
 					UpdatedStatusContents = append(UpdatedStatusContents, ptpInstance...)
+				}
+				idx += int(listLength) + 5
 
+			case DSTTPortTimeSynchronizationInfoList:
+				UpdatedStatusContents = append(UpdatedStatusContents, byte(DSTTPortTimeSynchronizationInfoList>>8), byte(DSTTPortTimeSynchronizationInfoList&0xFF))
+
+				listLength := binary.BigEndian.Uint16(managementList[idx+3 : idx+5])
+
+				for dsttI := 0; dsttI < int(listLength); {
+					dsttInfo := managementList[idx+5 : idx+5+int(listLength)]
+					dsttILength := binary.BigEndian.Uint16(managementList[idx+5 : idx+7])
+					dsttPortNum := binary.BigEndian.Uint16(managementList[idx+7 : idx+9])
+
+					ptpInstance := dsttInfo[4:int(dsttILength)]
+					ptpILength := binary.BigEndian.Uint16(ptpInstance[0:2])
+					ptpID := binary.BigEndian.Uint16(ptpInstance[2:4])
+					n.log.Infof("Set parameter with PTP Instance ID[%d]", ptpID)
+
+					for i := 4; i < int(ptpILength)+4; {
+						parameter := binary.BigEndian.Uint16(ptpInstance[i : i+2])
+						valLength := binary.BigEndian.Uint16(ptpInstance[i+2 : i+4])
+
+						if parameter == Grandmaster_on_behalf_of_DSTT_enabled {
+							value := ptpInstance[i+4 : i+4+int(valLength)]
+							n.log.Infof("set DSTT PortNum:%d with Grandmaster on behalf of DSTT enabled :[%x]", uint32(dsttPortNum), value)
+
+						} else if parameter == Grandmaster_candidate_enabled {
+							value := ptpInstance[i+4 : i+4+int(valLength)]
+							n.log.Infof("set DSTT PortNum:%d with Grandmaster candidate enabled :[%x]", uint32(dsttPortNum), value)
+
+						} else {
+							n.log.Infof("parameter [%d] not supported.", parameter)
+						}
+						i += 4 + int(valLength)
+					}
+					dsttI += 4 + int(dsttILength)
+
+					UpdatedStatusContents = append(UpdatedStatusContents, byte(listLength&0xFF))
+					UpdatedStatusContents = append(UpdatedStatusContents, dsttInfo...)
 				}
 				idx += int(listLength) + 5
 			}
 			setNum++
 			/* TODO：Hangle correct idx*/
+
 		case SubscribeNotifyForParameter:
 			n.log.Infof("Handle UserPlaneNode SubscribeNotifyForParameter Operation")
 			idx += 3
