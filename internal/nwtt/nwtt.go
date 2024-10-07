@@ -6,8 +6,11 @@ import (
 	"fmt"
 	"math/rand"
 	"net"
+	"os"
+	"os/exec"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/free5gc/go-upf/internal/forwarder"
@@ -108,8 +111,10 @@ func (n *NWTTServer) HandlePfcp(handler report.Handler) error {
 }
 
 func (n *NWTTServer) Init() error {
+	var wg sync.WaitGroup
 	n.CreatePortCapability()
 	n.CreateUserPlaneNodeCapability()
+	go n.ActivatePTPInstance(ch, &wg)
 	return nil
 }
 
@@ -228,7 +233,7 @@ func (n *NWTTServer) HandleTSCManagementInformation(TSCMInfoIEs []*ie.IE) (*ie.I
 		case ie.BridgeManagementInformationContainer:
 			UMIC = i.Payload
 			if UMIC == nil {
-				n.log.Errorln("pmic error")
+				n.log.Errorln("umic error")
 				return nil, err
 			}
 		case ie.NWTTPortNumber:
@@ -264,4 +269,35 @@ func (n *NWTTServer) HandleTSCManagementInformation(TSCMInfoIEs []*ie.IE) (*ie.I
 
 	n.log.Infof("NWTT get PMIC:[%x] ,BMIC:[%x] ,NWTTPort:[%d]\n", PMIC, UMIC, NWTTPortNumber)
 	return ie.NewTSCManagementInformationWithinSessionModificationResponse(PMICRsp, UMICRsp, NWTTPortNumberRsp), nil
+}
+
+func (n *NWTTServer) ActivatePTPInstance(ch chan ConfigurationForPTP, wg *sync.WaitGroup) {
+	defer wg.Done()
+	var ptp4l *exec.Cmd
+	for msg := range ch {
+		switch msg.DefaultDS_instanceType {
+		case BoundaryClock:
+			n.log.Info("5GS as E2E BC over UDP/IPv4")
+			if ptp4l == nil {
+				ptp4l = exec.Command("sudo", "ptp4l", "-i", "enp0s9", "-SmE4")
+				ptp4l.Stdout = os.Stdout
+				ptp4l.Stderr = os.Stderr
+			}
+			if err := ptp4l.Start(); err != nil {
+				n.log.Error(err)
+			}
+			continue
+		case E2ETransparentClock:
+			n.log.Info("5GS as E2E TC over UDP/IPv4")
+			if err := ptp4l.Process.Kill(); err != nil {
+				n.log.Warnln("Stopping ptp4l for TC")
+			}
+			ptp4l = nil
+		}
+	}
+
+	if ptp4l != nil {
+		n.log.Info("Stopping ptp4l before exiting")
+		ptp4l.Process.Kill()
+	}
 }

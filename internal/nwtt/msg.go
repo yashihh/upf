@@ -61,7 +61,16 @@ const (
 	BoundaryClock       uint8 = 0x01
 	P2PTransparentClock uint8 = 0x02
 	E2ETransparentClock uint8 = 0x03
+	P2PRelayInstance    uint8 = 0x04
 )
+
+var ptpInstanceTypesMap = map[uint8]string{
+	OrdinaryClock:       "OrdinaryClock",
+	BoundaryClock:       "BOUNDARY_CLOCK",
+	P2PTransparentClock: "P2P_TRANS_CLOCK",
+	E2ETransparentClock: "E2E_TRANS_CLOCK",
+	P2PRelayInstance:    "P2P_RELAY_INSTANCE",
+}
 
 // Supported transport types
 const (
@@ -69,6 +78,12 @@ const (
 	IPv6     uint8 = 0b00000001
 	Ethernet uint8 = 0b00000010
 )
+
+var transportTypesMap = map[uint8]string{
+	IPv4:     "IPv4",
+	IPv6:     "IPv6",
+	Ethernet: "Ethernet",
+}
 
 // Supported PTP delay mechanisms
 const (
@@ -177,3 +192,19 @@ const (
 	PortDS_DelayAsymmetry                          uint16 = 0x001B
 	PortDS_PortEnable                              uint16 = 0x001C
 )
+
+type ConfigurationForPTP struct {
+	// DefaultDS_clockIdentity
+	// DefaultDS_clockQuality_clockClass
+	// DefaultDS_clockQuality_clockAccuracy
+	// DefaultDS_clockQuality_offsetScaledLogVariance
+	// DefaultDS_priority1
+	// DefaultDS_priority2
+	// DefaultDS_domainNumber
+	// DefaultDS_sdoId
+	// DefaultDS_instanceEnable
+	// DefaultDS_externalPortConfigurationEnabled
+	DefaultDS_instanceType uint8
+}
+
+var ch = make(chan ConfigurationForPTP)

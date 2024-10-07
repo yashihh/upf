@@ -37,6 +37,10 @@ func (n *NWTTServer) HandleManageUserPlaneNodeCommand(managementList []byte) ([]
 	var readNum uint8 = 0
 	var setNum uint8 = 0
 
+	var transportType uint8
+	var grandmaster_candidate_enabled uint8
+	var grandmaster_on_behalf_of_DSTT_enabled uint8
+	var instanceType uint8
 	iEI := uint8(managementList[0])
 	length := binary.BigEndian.Uint16(managementList[1:3])
 	if int(length) != len(managementList[3:]) {
@@ -97,9 +101,14 @@ func (n *NWTTServer) HandleManageUserPlaneNodeCommand(managementList []byte) ([]
 							n.log.Infof("PTP profile :[%x]", value)
 
 						} else if parameter == Transport_type {
-							value := ptpInstance[i+4 : i+4+int(valLength)]
-							n.log.Infof("Transport type :[%x]", value)
-
+							transportType = ptpInstance[i+4 : i+4+int(valLength)][0]
+							n.log.Infof("Transport type :[%s]", transportTypesMap[transportType])
+						} else if parameter == Grandmaster_candidate_enabled {
+							grandmaster_candidate_enabled = ptpInstance[i+4 : i+4+int(valLength)][0]
+							n.log.Infof("Grandmaster candidate enabled :[%x]", grandmaster_candidate_enabled)
+						} else if parameter == DefaultDS_instanceType {
+							instanceType = ptpInstance[i+4 : i+4+int(valLength)][0]
+							n.log.Infof("DefaultDS.instanceType :[%s]", ptpInstanceTypesMap[instanceType])
 						} else {
 							n.log.Infof("parameter [%d] not supported.", parameter)
 						}
@@ -132,12 +141,12 @@ func (n *NWTTServer) HandleManageUserPlaneNodeCommand(managementList []byte) ([]
 						valLength := binary.BigEndian.Uint16(ptpInstance[i+2 : i+4])
 
 						if parameter == Grandmaster_on_behalf_of_DSTT_enabled {
-							value := ptpInstance[i+4 : i+4+int(valLength)]
-							n.log.Infof("set DSTT PortNum:%d with Grandmaster on behalf of DSTT enabled :[%x]", uint32(dsttPortNum), value)
+							grandmaster_on_behalf_of_DSTT_enabled = ptpInstance[i+4 : i+4+int(valLength)][0]
+							n.log.Infof("set DSTT PortNum:%d with Grandmaster on behalf of DSTT enabled :[%x]", uint32(dsttPortNum), grandmaster_on_behalf_of_DSTT_enabled)
 
 						} else if parameter == Grandmaster_candidate_enabled {
-							value := ptpInstance[i+4 : i+4+int(valLength)]
-							n.log.Infof("set DSTT PortNum:%d with Grandmaster candidate enabled :[%x]", uint32(dsttPortNum), value)
+							grandmaster_candidate_enabled = ptpInstance[i+4 : i+4+int(valLength)][0]
+							n.log.Infof("set DSTT PortNum:%d with Grandmaster candidate enabled :[%x]", uint32(dsttPortNum), grandmaster_candidate_enabled)
 
 						} else {
 							n.log.Infof("parameter [%d] not supported.", parameter)
@@ -190,6 +199,14 @@ func (n *NWTTServer) HandleManageUserPlaneNodeCommand(managementList []byte) ([]
 		/* Merge to buffer*/
 		buffer = append(buffer, UpdatedStatusContents...)
 
+	}
+	if grandmaster_candidate_enabled == TRUE && grandmaster_on_behalf_of_DSTT_enabled == TRUE && transportType == IPv4 {
+		config := ConfigurationForPTP{
+			DefaultDS_instanceType: instanceType,
+		}
+		n.log.Infof("Send ConfigurationForPTP")
+
+		ch <- config
 	}
 	return buffer, nil
 }
